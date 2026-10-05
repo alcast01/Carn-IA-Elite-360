@@ -5,14 +5,14 @@ from datetime import datetime, timedelta
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Cr-IA 150 | Sistema de Vaca-Cría de Vanguardia",
+    page_title="Cr-IA 150 | Sistema Integral Vaca-Cría",
     page_icon="🐂",
     layout="wide"
 )
 
 # --- CLASE DE GESTIÓN Y LÓGICA DE DATOS ---
-class CrIA150Vanguardia:
-    def __init__(self, db_name="cria_150_vanguardia.db"):
+class CrIA150Integral:
+    def __init__(self, db_name="cria_150_integral.db"):
         self.conn = sqlite3.connect(db_name, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self._crear_tablas()
@@ -174,11 +174,11 @@ class CrIA150Vanguardia:
             "peso_205": round(peso_ajustado_final, 2)
         }
 
-db = CrIA150Vanguardia()
+db = CrIA150Integral()
 
 # --- INTERFAZ DE USUARIO ---
-st.title("🐂 Cr-IA 150 - Vanguardia Vaca-Cría")
-st.subheader("Plataforma Inteligente de Producción Cárnica | Cañón de Tlaltenango, Zac.")
+st.title("🐂 Cr-IA 150 - Sistema Integral Vaca-Cría")
+st.subheader("Plataforma Inteligente, Económica y de Contingencia Ganadera")
 
 menu = [
     "Inventario y Altas", 
@@ -186,10 +186,11 @@ menu = [
     "Calendario Gestación & Partos (*Smart Calendar*)", 
     "Sanidad Integral Regional",
     "Evaluación BIF (205 Días) & Gráficas",
-    "Panel Financiero y Costo por Ternero",
+    "Finanzas y Proyección de Mercado",
+    "Plan de Contingencia (Sequía & Enfermedades)",
     "Protocolo de Parto y Alimentación Nocturna"
 ]
-choice = st.sidebar.selectbox("Módulos de Vanguardia", menu)
+choice = st.sidebar.selectbox("Módulos del Sistema", menu)
 
 if choice == "Inventario y Altas":
     st.header("📝 Alta de Reproductor / Vientre / Cría")
@@ -233,4 +234,92 @@ elif choice == "Control de Condición Corporal (CC 1-9)":
             peso = st.number_input("Peso vivo (kg)", 300.0, 900.0, 480.0)
             cc = st.slider("Condición Corporal (Escala BIF 1 a 9)", 1, 9, 5)
             
-            sub_cc = st.form_submit
+            sub_cc = st.form_submit_button("Registrar CC y Peso")
+            if sub_cc:
+                db.registrar_pesaje(id_sel, tipo_p, str(f_p), peso, cc)
+                if cc < 5:
+                    st.warning("⚠️ Alerta Nutricional: CC inferior al óptimo (5-6). Riesgo elevado de anestro prolongado postparto.")
+                else:
+                    st.success("✅ Condición corporal dentro de parámetros óptimos.")
+
+elif choice == "Calendario Gestación & Partos (*Smart Calendar*)":
+    st.header("📅 Calendario Inteligente de Servicios y Partos")
+    st.markdown("Cálculo automático de la fecha probable de parto (gestación bovina promedio de **283 días**) a partir del servicio.")
+    
+    df = db.obtener_animales()
+    df_v = df[df['categoria'].isin(['VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)'])]
+    
+    if df_v.empty:
+        st.info("No hay vientres registrados para empadre.")
+    else:
+        v_dict = {f"{r['siniiga']} ({r['raza']})": r['id'] for _, r in df_v.iterrows()}
+        v_sel = st.selectbox("Vientre Seleccionado", list(v_dict.keys()))
+        v_id = v_dict[v_sel]
+        
+        with st.form("form_smart_cal"):
+            evento = st.selectbox("Evento Reproductivo", ["EMPADRE / SERVICIO", "DIAGNOSTICO GESTACION", "PARTO"])
+            f_ev = st.date_input("Fecha del Evento")
+            res = st.selectbox("Resultado / Estatus", ["PREÑADA", "VACÍA", "PARTO NORMAL", "DISTOCIA"])
+            obs = st.text_area("Notas técnicas (ej. Toro semental, protocolo IATF)")
+            
+            sub_r = st.form_submit_button("Registrar y Calcular Fecha de Parto")
+            if sub_r:
+                f_parto = db.registrar_reproduccion(v_id, evento, str(f_ev), res, obs)
+                if f_parto:
+                    st.success(f"✅ Servicio registrado con éxito. **Fecha Probable de Parto estimada: {f_parto}** (programada a 283 días).")
+                else:
+                    st.success("✅ Evento reproductivo guardado correctamente.")
+
+    st.divider()
+    st.subheader("📋 Historial de Gestaciones Activas")
+    df_repro = db.obtener_reproduccion()
+    if not df_repro.empty:
+        st.dataframe(df_repro[['siniiga', 'tipo_evento', 'fecha_evento', 'fecha_probable_parto', 'resultado', 'observaciones']], use_container_width=True)
+    else:
+        st.info("Sin registros reproductivos aún.")
+
+elif choice == "Sanidad Integral Regional":
+    st.header("💉 Calendario Zoosanitario (Zacatecas)")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("Sin animales.")
+    else:
+        d_anim = {f"{r['siniiga']}": r['id'] for _, r in df.iterrows()}
+        sel_an = st.selectbox("Seleccionar Animal o Lote", list(d_anim.keys()))
+        id_a = d_anim[sel_an]
+        
+        with st.form("form_san_z"):
+            trat = st.selectbox("Biológico / Tratamiento", [
+                "VACUNA ANTIRRÁBICA / DERRIENGUE",
+                "CLOSTRIDIOSIS (Pierna Negra)",
+                "LEPTOSPIROSIS / IBR / BVD",
+                "CONTROL PARASITARIO"
+            ])
+            f_ap = st.date_input("Fecha de Aplicación")
+            f_prox = st.date_input("Próxima Dosis / Refuerzo Anual")
+            
+            if st.form_submit_button("Guardar Sanidad"):
+                db.registrar_sanidad(id_a, trat, str(f_ap), str(f_prox))
+                st.success("Sanidad registrada exitosamente.")
+
+elif choice == "Evaluación BIF (205 Días) & Gráficas":
+    st.header("📊 Estandarización BIF y Análisis Gráfico del Hato")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("No hay datos suficientes.")
+    else:
+        res_list = []
+        for _, r in df.iterrows():
+            eval_res = db.evaluar_destete_bif(r['id'])
+            if eval_res:
+                res_list.append({
+                    "SINIIGA": r['siniiga'],
+                    "Sexo": r['sexo'],
+                    "Edad Madre (años)": r['edad_madre_anos'],
+                    "Días a Destete": eval_res['dias'],
+                    "GDP (kg/día)": eval_res['gdp'],
+                    "Peso Ajustado 205 Días (kg)": eval_res['peso_205']
+                })
+        if len(res_list) > 0:
+            df_final = pd.DataFrame(res_list)
+            st.metric("Prom
