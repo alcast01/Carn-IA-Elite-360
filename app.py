@@ -24,12 +24,12 @@ class CrIA150Avangard:
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 siniiga TEXT UNIQUE,
                 arete_propio TEXT,
-                categoria TEXT, -- 'VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)', 'CRIA', 'TORO REPRODUCTOR'
+                categoria TEXT,
                 raza TEXT,
                 sexo TEXT,
                 fecha_nacimiento TEXT,
                 edad_madre_anos REAL,
-                circunferencia_escrotal REAL DEFAULT NULL -- Específico para toros
+                circunferencia_escrotal REAL DEFAULT NULL
             )
         ''')
         # Pesajes y Condición Corporal detallada (Escala 1-9 BIF)
@@ -37,10 +37,10 @@ class CrIA150Avangard:
             CREATE TABLE IF NOT EXISTS pesajes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 animal_id INTEGER,
-                tipo_pesaje TEXT, -- 'NACIMIENTO', 'DESTETE', 'PREPARTO', 'EMPADRE'
+                tipo_pesaje TEXT,
                 fecha_pesaje TEXT,
                 peso_kg REAL,
-                condicion_corporal INTEGER, -- Escala 1 a 9 (Objetivo parto: 5-6)
+                condicion_corporal INTEGER,
                 FOREIGN KEY (animal_id) REFERENCES animales (id)
             )
         ''')
@@ -49,9 +49,9 @@ class CrIA150Avangard:
             CREATE TABLE IF NOT EXISTS reproduccion (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 animal_id INTEGER,
-                tipo_evento TEXT, -- 'EMPADRE / SERVICIO', 'DIAGNOSTICO GESTACION', 'PARTO'
+                tipo_evento TEXT,
                 fecha_evento TEXT,
-                resultado TEXT, -- 'PREÑADA', 'VACÍA', 'PARTO NORMAL', 'DISTOCIA'
+                resultado TEXT,
                 observaciones TEXT,
                 FOREIGN KEY (animal_id) REFERENCES animales (id)
             )
@@ -131,7 +131,6 @@ class CrIA150Avangard:
         gdp = (peso_destete - peso_nacer) / dias_edad
         pa_205_base = (gdp * 205) + peso_nacer
         
-        # Factores de corrección BIF por sexo y edad de madre
         factor_sexo = 1.05 if sexo == 'HEMBRA' else 1.00
         if edad_madre < 3.0:
             factor_madre = 1.10
@@ -177,7 +176,7 @@ if choice == "Inventario y Altas":
             sexo = st.selectbox("Sexo", ["MACHO", "HEMBRA"])
             fecha_nacimiento = st.date_input("Fecha de Nacimiento")
             edad_madre = st.number_input("Edad de la Madre al Parto (Años)", 1.5, 15.0, 4.0, 0.5)
-            ce = st.number_input("Circunferencia Escrotal (cm) [Solo si es Toro, min. 32 cm]", 25.0, 50.0, 34.0, help="Indicador de fertilidad propia y precocidad sexual en hijas.")
+            ce = st.number_input("Circunferencia Escrotal (cm) [Solo si es Toro, min. 32 cm]", 25.0, 50.0, 34.0)
         
         sub = st.form_submit_button("Registrar en Base Científica")
         if sub:
@@ -204,13 +203,13 @@ elif choice == "Control de Condición Corporal (CC 1-9)":
             tipo_p = st.selectbox("Momento Fisiológico de Evaluación", ["PREPARTO (Último Tercio)", "PARTO", "EMPADRE / SERVICIO", "DESTETE"])
             f_p = st.date_input("Fecha de Evaluación")
             peso = st.number_input("Peso vivo (kg)", 300.0, 900.0, 480.0)
-            cc = st.slider("Condición Corporal (Escala BIF 1 a 9)", 1, 9, 5, help="1=Esquelética, 5-6=Óptima al parto, 9=Obesa.")
+            cc = st.slider("Condición Corporal (Escala BIF 1 a 9)", 1, 9, 5)
             
             sub_cc = st.form_submit_button("Registrar CC y Peso")
             if sub_cc:
                 db.registrar_pesaje(id_sel, tipo_p, str(f_p), peso, cc)
                 if cc < 5:
-                    st.warning("⚠️ **Alerta Nutricional:** CC inferior al óptimo (5-6). Riesgo elevado de anestro prolongado postparto. Se requiere suplementación energética-proteica inmediata.")
+                    st.warning("⚠️ Alerta Nutricional: CC inferior al óptimo (5-6). Riesgo elevado de anestro prolongado postparto.")
                 else:
                     st.success("✅ Condición corporal dentro de parámetros óptimos de eficiencia.")
 
@@ -230,13 +229,13 @@ elif choice == "Gestión Reproductiva y Anestro":
             evento = st.selectbox("Evento Reproductivo", ["EMPADRE / SERVICIO", "DIAGNOSTICO GESTACION", "PARTO"])
             f_ev = st.date_input("Fecha del Evento")
             res = st.selectbox("Resultado", ["PREÑADA", "VACÍA", "PARTO NORMAL", "DISTOCIA (Problema al parto)"])
-            obs = st.text_area("Notas técnicas (ej. protocolo IATF, toro semental asignado)")
+            obs = st.text_area("Notas técnicas")
             
             sub_r = st.form_submit_button("Guardar Registro Reproductivo")
             if sub_r:
                 db.registrar_reproduccion(v_id, evento, str(f_ev), res, obs)
                 if res == "DISTOCIA":
-                    st.error("🚨 Distocia registrada. Revisar proporción tamaño fetal / pelvis y evaluar historial de la madre y línea del toro.")
+                    st.error("🚨 Distocia registrada. Revisar proporción tamaño fetal / pelvis y evaluar historial.")
                 else:
                     st.success("Evento registrado correctamente.")
 
@@ -252,10 +251,10 @@ elif choice == "Sanidad Integral Regional":
         
         with st.form("form_san_z"):
             trat = st.selectbox("Biológico / Tratamiento", [
-                "VACUNA ANTIRRÁBICA / DERRIENGUE (Endémica en región)",
+                "VACUNA ANTIRRÁBICA / DERRIENGUE",
                 "CLOSTRIDIOSIS (Pierna Negra / Edema Maligno)",
-                "LEPTOSPIROSIS / IBR / BVD (Complejo Reproductivo)",
-                "CONTROL PARASITARIO (Endo y Ectoparásitos)"
+                "LEPTOSPIROSIS / IBR / BVD",
+                "CONTROL PARASITARIO"
             ])
             f_ap = st.date_input("Fecha de Aplicación")
             f_prox = st.date_input("Próxima Dosis / Refuerzo Anual")
@@ -290,10 +289,20 @@ elif choice == "Evaluación BIF (205 Días)":
             st.info("Registre pesajes de Nacimiento y Destete en los animales para calcular los ajustes BIF.")
 
 elif choice == "Protocolo de Parto y Alimentación Nocturna":
-    st.header("🌙 Estrategia Fisiológica de Alimentación Nocturna (*Night Feeding*)")
-    st.markdown("""
-    **Fundamento Científico:** Investigaciones en fisiología bovina demuestran que ofrecer la ración completa o el suplemento alimenticio de mayor peso **al atardecer / noche (17:00 a 21:00 hrs)** desplaza los picos de contracción uterina y el inicio del trabajo de parto hacia las **horas diurnas (luz del día)**. 
+    st.header("🌙 Estrategia Fisiológica de Alimentación Nocturna (Night Feeding)")
+    st.markdown(
+        "**Fundamento Científico:** Investigaciones en fisiología bovina demuestran que ofrecer la ración completa o el suplemento alimenticio "
+        "de mayor peso **al atardecer / noche (17:00 a 21:00 hrs)** desplaza los picos de contracción uterina y el inicio del trabajo de parto "
+        "hacia las **horas diurnas (luz del día)**.\n\n"
+        "*Beneficios comprobados:*\n"
+        "* Reducción drástica de la mortalidad neonatal por atención oportuna de distocias.\n"
+        "* Menor estrés para el personal de rancho durante la época de pariciones en el Cañón de Tlaltenango."
+    )
     
-    *Beneficios comprobados:*
-    * Reducción drástica de la mortalidad neonatal por atención oportuna de distocias.
-    * Menor estrés para el personal de rancho durante la época de pariciones en el Cañón de T
+    with st.form("form_night_feed"):
+        fecha_inicio_par = st.date_input("Fecha Estimada de Inicio de Parición")
+        horas_sumi = st.selectbox("Horario Programado de Suplementación Nocturna", ["17:00 Horas", "18:30 Horas", "20:00 Horas"])
+        obs_nf = st.text_area("Notas sobre ingredientes (ej. rastrojo de maíz tratado + melaza/urea)")
+        
+        if st.form_submit_button("Activar Protocolo de Parto Diurno"):
+            st.success(f"✅ Protocolo configurado con éxito. El suministro nocturno a las {horas_sumi} iniciará la sincronización metabólica.")
