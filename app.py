@@ -374,36 +374,45 @@ elif choice == "Finanzas y Proyección de Mercado":
         st.info("Sin costos registrados todavía.")
 
 elif choice == "Plan de Contingencia (Sequía & Enfermedades)":
-    st.header("🚨 Plan de Emergencia y Contingencia Ganadera")
-    st.markdown("Protocolos críticos de acción inmediata ante escenarios de sequía extrema, brotes de anaplasmosis o alertas por gusano barrenador.")
+    st.header("🚨 Plan de Emergencia, Sanidad Crítica y Contingencia Ganadera")
+    st.markdown("Protocolos zootécnicos y tratamientos recomendados ante desafíos sanitarios severos y sequía extrema.")
 
-    tab1, tab2, tab3 = st.tabs(["🌵 Sequía / Estiaje Severo", "🦠 Anaplasmosis", "🪱 Gusano Barrenador"])
+    tab1, tab2, tab3, tab4 = st.tabs(["🌵 Sequía / Estiaje", "🦠 Anaplasmosis", "🕷️ Control de Garrapata", "🪱 Gusano Barrenador"])
 
     with tab1:
         st.subheader("Plan de Respuesta ante Sequía Extrema")
         st.markdown(
             "1. **Destete Precoz / Anticipado:** Si el forraje del agostadero cae por debajo del 10% de disponibilidad útil, destetar terneros a los 60-90 días de edad. Esto reduce la demanda energética de la vaca en lactancia en un 35-40%, protegiendo su condición corporal para el siguiente empadre.\n"
             "2. **Desecho Estratégico:** Venta inmediata de vientres improductivos, vacías diagnosticadas por tacto, vacas con problemas dentales o temperamento agresivo.\n"
-            "3. **Banco de Alimentos Regional:** Activación de raciones de sobrevivencia basadas en rastrojos amonificados o tratados con urea + melaza, evitando pérdidas catastróficas de peso vivo."
+            "3. **Banco de Alimentos Regional:** Activación de raciones de sobrevivencia basadas en rastrojos amonificados o tratados con urea + melaza."
         )
-        if st.button("Activar Protocolo de Emergencia por Sequía"):
-            st.warning("⚠️ **Alerta de Sequía Activada:** Se recomienda exportar reporte de vientres vacíos y programar destetes de emergencia.")
 
     with tab2:
-        st.subheader("Protocolo Sanitario: Anaplasmosis Bovina")
+        st.subheader("Protocolo y Tratamiento: Anaplasmosis Bovina")
         st.markdown(
             "**Enfermedad hemotrópica transmitida por garrapatas, tábanos y fómites contaminados.**\n\n"
-            "* **Signos Clínicos Clave:** Anemia severa, ictericia (mucosas pálidas/amarillentas), fiebre alta inicial, debilidad extrema y caída súbita en la producción láctea o muerte súbita en animales estresados.\n"
-            "* **Acción Inmediata y Tratamiento:** Aplicación de **Oxitetraciclina de larga acción (LA)** bajo prescripción médico-veterinaria y control estricto de vectores externos (garrapaticidas y baños periódicos)."
+            "* **Signos Clínicos:** Anemia severa, ictericia (mucosas pálidas/amarillentas), fiebre alta inicial, debilidad extrema y caída súbita en la producción láctea.\n"
+            "* **Tratamiento Clínico:** Aplicación de **Oxitetraciclina de larga acción (LA)** a dosis terapéutica (20 mg/kg PV) según criterio médico. En casos avanzados con anemia severa, se requiere terapia de soporte con complejos vitamínicos (Vitamina B12/Hierro) y protectores hepáticos."
         )
 
     with tab3:
-        st.subheader("Protocolo Sanitario: Gusano Barrenador (*Cochliomyia hominivorax*)")
+        st.subheader("Protocolo y Tratamiento: Control de Garrapata")
+        st.markdown(
+            "**Ectoparásito vector de hemoparásitos y causante de pérdidas en ganancia de peso.**\n\n"
+            "* **Estrategia de Tratamiento:** Baños de aspersión o inmersión con garrapaticidas específicos (combinación de piretroides, amidinas o lactonas macrocíclicas según el grado de resistencia local).\n"
+            "* **Manejo de Potreros:** Implementación de periodos de descanso en potreros para cortar el ciclo biológico de la garrapata en el agostadero."
+        )
+
+    with tab4:
+        st.subheader("Protocolo y Tratamiento: Gusano Barrenador (*Cochliomyia hominivorax*)")
         st.markdown(
             "**Alerta Sanitaria Crítica:** Infestación por larvas de mosca que se alimentan de tejido vivo en cualquier herida abierta.\n\n"
-            "* **Inspección Obligatoria Diaria:** Revisión rigurosa de ombligos en terneros recién nacidos, heridas por marcas a fuego, castraciones, descornes y lesiones por mordeduras o espinas.\n"
-            "* **Tratamiento y Contención:** Aplicación inmediata de larvicidas curativos en spray/pasta a base de organosfosforados, remoción manual cuidadosa de larvas con pinzas (nunca aplastar dentro de la herida) y reporte sanitario oficial inmediato."
+            "* **Inspección Obligatoria Diaria:** Revisión rigurosa de ombligos en terneros recién nacidos, heridas por marcas, castraciones y descornes.\n"
+            "* **Tratamiento Curativo:** Limpieza profunda de la herida, aplicación tópica de **larvicidas curativos en spray o pasta** a base de organosfosforados, extracción manual cuidadosa de larvas con pinzas (nunca aplastar dentro de la herida) y aplicación de tratamiento de soporte antibiótico/cicatrizante."
         )
+
+    st.divider()
+    st.error("🚨 **AVISO DE ASESORÍA CLÍNICA VETERINARIA:** En caso de emergencia, brotes atípicos, alta morbilidad o dudas sobre dosificación de tratamientos, **contactar de inmediato a su veterinario Alejandro Castañeda Correa para asesoría y guía clínica especializada.**")
 
 elif choice == "Protocolo de Parto y Alimentación Nocturna":
     st.header("🌙 Estrategia Fisiológica de Alimentación Nocturna (Night Feeding)")
