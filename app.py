@@ -98,7 +98,7 @@ class CrIA150Vanguardia:
         f_parto_est = None
         if tipo_evento == "EMPADRE / SERVICIO":
             f_dt = datetime.strptime(fecha, "%Y-%m-%d")
-            f_dt_parto = f_dt + timedelta(days=283) # Promedio gestación bovina
+            f_dt_parto = f_dt + timedelta(days=283)
             f_parto_est = f_dt_parto.strftime("%Y-%m-%d")
 
         self.cursor.execute('''
@@ -233,109 +233,4 @@ elif choice == "Control de Condición Corporal (CC 1-9)":
             peso = st.number_input("Peso vivo (kg)", 300.0, 900.0, 480.0)
             cc = st.slider("Condición Corporal (Escala BIF 1 a 9)", 1, 9, 5)
             
-            sub_cc = st.form_submit_button("Registrar CC y Peso")
-            if sub_cc:
-                db.registrar_pesaje(id_sel, tipo_p, str(f_p), peso, cc)
-                if cc < 5:
-                    st.warning("⚠️ Alerta Nutricional: CC inferior al óptimo (5-6). Riesgo elevado de anestro prolongado postparto.")
-                else:
-                    st.success("✅ Condición corporal dentro de parámetros óptimos.")
-
-elif choice == "Calendario Gestación & Partos (*Smart Calendar*)":
-    st.header("📅 Calendario Inteligente de Servicios y Partos")
-    st.markdown("Cálculo automático de la fecha probable de parto (gestación bovina promedio de **283 días**) a partir del servicio.")
-    
-    df = db.obtener_animales()
-    df_v = df[df['categoria'].isin(['VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)'])]
-    
-    if df_v.empty:
-        st.info("No hay vientres registrados para empadre.")
-    else:
-        v_dict = {f"{r['siniiga']} ({r['raza']})": r['id'] for _, r in df_v.iterrows()}
-        v_sel = st.selectbox("Vientre Seleccionado", list(v_dict.keys()))
-        v_id = v_dict[v_sel]
-        
-        with st.form("form_smart_cal"):
-            evento = st.selectbox("Evento Reproductivo", ["EMPADRE / SERVICIO", "DIAGNOSTICO GESTACION", "PARTO"])
-            f_ev = st.date_input("Fecha del Evento")
-            res = st.selectbox("Resultado / Estatus", ["PREÑADA", "VACÍA", "PARTO NORMAL", "DISTOCIA"])
-            obs = st.text_area("Notas técnicas (ej. Toro semental, protocolo IATF)")
-            
-            sub_r = st.form_submit_button("Registrar y Calcular Fecha de Parto")
-            if sub_r:
-                f_parto = db.registrar_reproduccion(v_id, evento, str(f_ev), res, obs)
-                if f_parto:
-                    st.success(f"✅ Servicio registrado con éxito. **Fecha Probable de Parto estimada: {f_parto}** (programada a 283 días).")
-                else:
-                    st.success("✅ Evento reproductivo guardado correctamente.")
-
-    st.divider()
-    st.subheader("📋 Historial de Gestaciones Activas")
-    df_repro = db.obtener_reproduccion()
-    if not df_repro.empty:
-        st.dataframe(df_repro[['siniiga', 'tipo_evento', 'fecha_evento', 'fecha_probable_parto', 'resultado', 'observaciones']], use_container_width=True)
-    else:
-        st.info("Sin registros reproductivos aún.")
-
-elif choice == "Sanidad Integral Regional":
-    st.header("💉 Calendario Zoosanitario (Zacatecas)")
-    df = db.obtener_animales()
-    if df.empty:
-        st.info("Sin animales.")
-    else:
-        d_anim = {f"{r['siniiga']}": r['id'] for _, r in df.iterrows()}
-        sel_an = st.selectbox("Seleccionar Animal o Lote", list(d_anim.keys()))
-        id_a = d_anim[sel_an]
-        
-        with st.form("form_san_z"):
-            trat = st.selectbox("Biológico / Tratamiento", [
-                "VACUNA ANTIRRÁBICA / DERRIENGUE",
-                "CLOSTRIDIOSIS (Pierna Negra)",
-                "LEPTOSPIROSIS / IBR / BVD",
-                "CONTROL PARASITARIO"
-            ])
-            f_ap = st.date_input("Fecha de Aplicación")
-            f_prox = st.date_input("Próxima Dosis / Refuerzo Anual")
-            
-            if st.form_submit_button("Guardar Sanidad"):
-                db.registrar_sanidad(id_a, trat, str(f_ap), str(f_prox))
-                st.success("Sanidad registrada exitosamente.")
-
-elif choice == "Evaluación BIF (205 Días) & Gráficas":
-    st.header("📊 Estandarización BIF y Análisis Gráfico del Hato")
-    df = db.obtener_animales()
-    if df.empty:
-        st.info("No hay datos suficientes.")
-    else:
-        res_list = []
-        for _, r in df.iterrows():
-            eval_res = db.evaluar_destete_bif(r['id'])
-            if eval_res:
-                res_list.append({
-                    "SINIIGA": r['siniiga'],
-                    "Sexo": r['sexo'],
-                    "Edad Madre (años)": r['edad_madre_anos'],
-                    "Días a Destete": eval_res['dias'],
-                    "GDP (kg/día)": eval_res['gdp'],
-                    "Peso Ajustado 205 Días (kg)": eval_res['peso_205']
-                })
-        if len(res_list) > 0:
-            df_final = pd.DataFrame(res_list)
-            st.metric("Promedio de Peso Ajustado al Destete (Hato)", f"{round(df_final['Peso Ajustado 205 Días (kg)'].mean(), 2)} kg")
-            st.dataframe(df_final, use_container_width=True)
-            
-            st.subheader("📈 Gráfica de Distribución de Pesos al Destete (BIF 205)")
-            st.bar_chart(df_final.set_index("SINIIGA")["Peso Ajustado 205 Días (kg)"])
-        else:
-            st.info("Registre pesajes de Nacimiento y Destete en los animales para calcular los ajustes BIF y generar gráficas.")
-
-elif choice == "Panel Financiero y Costo por Ternero":
-    st.header("💰 Panel Financiero y Costos de Producción por Vientre")
-    st.markdown("Control de gastos en alimentación, sanidad y manejo para calcular el costo real por kilogramo de ternero destetado.")
-    
-    df = db.obtener_animales()
-    if df.empty:
-        st.info("Registre animales primero.")
-    else:
-        d_anim = {f"{r['siniiga']} - {r['categoria']}": r['id'] for _, r in df.iterrows()}
-        id_sel_fin = st.selectbox("Seleccionar Animal / Vaca para Registrar Costo", list(d_anim.keys
+            sub_cc = st.form_submit
