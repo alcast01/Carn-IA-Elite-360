@@ -5,80 +5,106 @@ from datetime import datetime
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Cr-IA Elite 360 | Cañón de Tlaltenango",
-    page_icon="🐄",
+    page_title="Cr-IA 150 | Sistema de Vaca-Cría Avanzado",
+    page_icon="🐂",
     layout="wide"
 )
 
-# --- CLASE DE GESTIÓN Y LÓGICA DE DATOS ---
-class GanaderiaTlaltenangoApp:
-    def __init__(self, db_name="tlaltenango_elite_carne.db"):
+# --- CLASE DE GESTIÓN Y LÓGICA CIENTÍFICA DE DATOS ---
+class CrIA150Avangard:
+    def __init__(self, db_name="cria_150_cientifica.db"):
         self.conn = sqlite3.connect(db_name, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self._crear_tablas()
 
     def _crear_tablas(self):
+        # Animales / Vientres, Toros y Crías
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS animales (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 siniiga TEXT UNIQUE,
+                arete_propio TEXT,
+                categoria TEXT, -- 'VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)', 'CRIA', 'TORO REPRODUCTOR'
+                raza TEXT,
                 sexo TEXT,
                 fecha_nacimiento TEXT,
-                edad_madre_anos REAL
+                edad_madre_anos REAL,
+                circunferencia_escrotal REAL DEFAULT NULL -- Específico para toros
             )
         ''')
+        # Pesajes y Condición Corporal detallada (Escala 1-9 BIF)
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS pesajes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 animal_id INTEGER,
-                tipo_pesaje TEXT,
+                tipo_pesaje TEXT, -- 'NACIMIENTO', 'DESTETE', 'PREPARTO', 'EMPADRE'
                 fecha_pesaje TEXT,
                 peso_kg REAL,
+                condicion_corporal INTEGER, -- Escala 1 a 9 (Objetivo parto: 5-6)
                 FOREIGN KEY (animal_id) REFERENCES animales (id)
             )
         ''')
+        # Reproducción y Anestro Postparto
         self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS nutricion_registros (
+            CREATE TABLE IF NOT EXISTS reproduccion (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                lote_nombre TEXT,
-                etapa_fisiologica TEXT,
-                peso_promedio REAL,
-                condicion_estacional TEXT,
-                suplemento_recomendado TEXT,
-                fecha TEXT
+                animal_id INTEGER,
+                tipo_evento TEXT, -- 'EMPADRE / SERVICIO', 'DIAGNOSTICO GESTACION', 'PARTO'
+                fecha_evento TEXT,
+                resultado TEXT, -- 'PREÑADA', 'VACÍA', 'PARTO NORMAL', 'DISTOCIA'
+                observaciones TEXT,
+                FOREIGN KEY (animal_id) REFERENCES animales (id)
+            )
+        ''')
+        # Sanidad Regional (Derriengue, Clostridios, etc.)
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sanidad (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                animal_id INTEGER,
+                tipo_tratamiento TEXT,
+                fecha_aplicacion TEXT,
+                proxima_dosis TEXT,
+                FOREIGN KEY (animal_id) REFERENCES animales (id)
             )
         ''')
         self.conn.commit()
 
-    def registrar_animal(self, siniiga, sexo, fecha_nacimiento, edad_madre_anos):
+    def registrar_animal(self, siniiga, arete, categoria, raza, sexo, fecha_nac, edad_madre, ce):
         try:
             self.cursor.execute('''
-                INSERT INTO animales (siniiga, sexo, fecha_nacimiento, edad_madre_anos)
-                VALUES (?, ?, ?, ?)
-            ''', (siniiga, sexo.upper(), fecha_nacimiento, edad_madre_anos))
+                INSERT INTO animales (siniiga, arete_propio, categoria, raza, sexo, fecha_nacimiento, edad_madre_anos, circunferencia_escrotal)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (siniiga, arete, categoria, raza, sexo.upper(), fecha_nac, edad_madre, ce))
             self.conn.commit()
-            return True, "Animal registrado exitosamente."
+            return True, "Registro científico guardado con éxito en Cr-IA 150."
         except sqlite3.IntegrityError:
             return False, f"El SINIIGA {siniiga} ya se encuentra registrado."
 
-    def registrar_pesaje(self, animal_id, tipo_pesaje, fecha_pesaje, peso_kg):
+    def registrar_pesaje(self, animal_id, tipo, fecha, peso, cc):
         self.cursor.execute('''
-            INSERT INTO pesajes (animal_id, tipo_pesaje, fecha_pesaje, peso_kg)
-            VALUES (?, ?, ?, ?)
-        ''', (animal_id, tipo_pesaje.upper(), fecha_pesaje, peso_kg))
+            INSERT INTO pesajes (animal_id, tipo_pesaje, fecha_pesaje, peso_kg, condicion_corporal)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (animal_id, tipo.upper(), fecha, peso, cc))
+        self.conn.commit()
+
+    def registrar_reproduccion(self, animal_id, tipo_evento, fecha, resultado, obs):
+        self.cursor.execute('''
+            INSERT INTO reproduccion (animal_id, tipo_evento, fecha_evento, resultado, observaciones)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (animal_id, tipo_evento, fecha, resultado, obs))
+        self.conn.commit()
+
+    def registrar_sanidad(self, animal_id, tratamiento, fecha, prox):
+        self.cursor.execute('''
+            INSERT INTO sanidad (animal_id, tipo_tratamiento, fecha_aplicacion, proxima_dosis)
+            VALUES (?, ?, ?, ?, ?)
+        ''', (animal_id, tratamiento, fecha, prox))
         self.conn.commit()
 
     def obtener_animales(self):
         return pd.read_sql("SELECT * FROM animales", self.conn)
 
-    def guardar_registro_nutricion(self, lote, etapa, peso, estacion, suplemento):
-        self.cursor.execute('''
-            INSERT INTO nutricion_registros (lote_nombre, etapa_fisiologica, peso_promedio, condicion_estacional, suplemento_recomendado, fecha)
-            VALUES (?, ?, ?, ?, ?, ?)
-        ''', (lote, etapa, peso, estacion, suplemento, str(datetime.now().date())))
-        self.conn.commit()
-
-    def calcular_evaluacion_destete(self, animal_id):
+    def evaluar_destete_bif(self, animal_id):
         self.cursor.execute("SELECT sexo, fecha_nacimiento, edad_madre_anos FROM animales WHERE id = ?", (animal_id,))
         animal = self.cursor.fetchone()
         if not animal:
@@ -104,8 +130,9 @@ class GanaderiaTlaltenangoApp:
 
         gdp = (peso_destete - peso_nacer) / dias_edad
         pa_205_base = (gdp * 205) + peso_nacer
-        factor_sexo = 1.05 if sexo == 'HEMBRA' else 1.00
         
+        # Factores de corrección BIF por sexo y edad de madre
+        factor_sexo = 1.05 if sexo == 'HEMBRA' else 1.00
         if edad_madre < 3.0:
             factor_madre = 1.10
         elif edad_madre > 10.0:
@@ -116,175 +143,88 @@ class GanaderiaTlaltenangoApp:
         peso_ajustado_final = pa_205_base * factor_sexo * factor_madre
 
         return {
-            "dias_al_destete": dias_edad,
-            "gdp_kg_dia": round(gdp, 3),
-            "peso_ajustado_205": round(peso_ajustado_final, 2)
+            "dias": dias_edad,
+            "gdp": round(gdp, 3),
+            "peso_205": round(peso_ajustado_final, 2)
         }
 
-# Inicializar Base de Datos
-db = GanaderiaTlaltenangoApp()
+db = CrIA150Avangard()
 
-# --- INTERFAZ DE USUARIO (STREAMLIT) ---
-st.title("🐄 Cr-IA Elite 360")
-st.subheader("Gestión Integral de Ganado de Carne - Cañón de Tlaltenango, Zacatecas")
+# --- INTERFAZ DE USUARIO ---
+st.title("🐂 Cr-IA 150")
+st.subheader("Plataforma Zootécnica Basada en Evidencia | Cañón de Tlaltenango, Zac.")
 
 menu = [
-    "Registrar Animal", 
-    "Capturar Pesajes", 
-    "Evaluación Individual", 
-    "Evaluación y Clasificación de Lotes",
-    "Nutrición y Raciones Regionales"
+    "Inventario y Altas", 
+    "Control de Condición Corporal (CC 1-9)", 
+    "Gestión Reproductiva y Anestro", 
+    "Sanidad Integral Regional",
+    "Evaluación BIF (205 Días)",
+    "Protocolo de Parto y Alimentación Nocturna"
 ]
-choice = st.sidebar.selectbox("Navegación del Hato", menu)
+choice = st.sidebar.selectbox("Módulos Científicos Hato", menu)
 
-if choice == "Registrar Animal":
-    st.header("📝 Registro de Nueva Cría / Pie de Cría")
-    with st.form("form_animal"):
-        siniiga = st.text_input("Número SINIIGA o Identificador Oficial")
-        sexo = st.selectbox("Sexo", ["MACHO", "HEMBRA"])
-        fecha_nacimiento = st.date_input("Fecha de Nacimiento")
-        edad_madre = st.number_input("Edad de la Madre al Parto (Años)", min_value=1.5, max_value=15.0, value=4.0, step=0.5)
-        
-        submitted = st.form_submit_button("Guardar Animal")
-        if submitted:
-            if siniiga:
-                exito, mensaje = db.registrar_animal(siniiga, sexo, str(fecha_nacimiento), edad_madre)
-                if exito:
-                    st.success(mensaje)
-                else:
-                    st.warning(mensaje)
-            else:
-                st.error("Por favor ingrese un SINIIGA válido.")
-
-elif choice == "Capturar Pesajes":
-    st.header("⚖️ Registro en Báscula")
-    df_animales = db.obtener_animales()
-    
-    if df_animales.empty:
-        st.info("Primero debe registrar animales en el sistema.")
-    else:
-        animal_dict = {f"{row['siniiga']} ({row['sexo']})": row['id'] for _, row in df_animales.iterrows()}
-        animal_seleccionado = st.selectbox("Seleccione el Animal", list(animal_dict.keys()))
-        animal_id = animal_dict[animal_seleccionado]
-        
-        with st.form("form_pesaje"):
-            tipo_pesaje = st.selectbox("Tipo de Pesaje", ["NACIMIENTO", "DESTETE"])
-            fecha_pesaje = st.date_input("Fecha del Pesaje")
-            peso_kg = st.number_input("Peso en Kilogramos (kg)", min_value=10.0, max_value=800.0, value=40.0)
-            
-            submitted_p = st.form_submit_button("Registrar Báscula")
-            if submitted_p:
-                db.registrar_pesaje(animal_id, tipo_pesaje, str(fecha_pesaje), peso_kg)
-                st.success(f"Pesaje de {tipo_pesaje} guardado correctamente ({peso_kg} kg).")
-
-elif choice == "Evaluación Individual":
-    st.header("📊 Evaluación Zootécnica Individual")
-    df_animales = db.obtener_animales()
-    
-    if df_animales.empty:
-        st.info("No hay animales registrados.")
-    else:
-        animal_dict = {f"{row['siniiga']} ({row['sexo']})": row['id'] for _, row in df_animales.iterrows()}
-        animal_seleccionado = st.selectbox("Seleccione animal para evaluar", list(animal_dict.keys()))
-        animal_id = animal_dict[animal_seleccionado]
-        
-        if st.button("Calcular Índices Productivos"):
-            res = db.calcular_evaluacion_destete(animal_id)
-            if res:
-                col1, col2, col3 = st.columns(3)
-                col1.metric("Días al Destete", f"{res['dias_al_destete']} días")
-                col2.metric("Ganancia Diaria (GDP)", f"{res['gdp_kg_dia']} kg/día")
-                col3.metric("Peso Ajustado 205 Días", f"{res['peso_ajustado_205']} kg")
-            else:
-                st.warning("Faltan datos de pesaje (Nacimiento y/o Destete) para este animal.")
-
-elif choice == "Evaluación y Clasificación de Lotes":
-    st.header("🏆 Evaluación Global del Hato y Clasificación por Índice")
-    df_animales = db.obtener_animales()
-    
-    if df_animales.empty:
-        st.info("No hay suficientes datos en el hato para realizar una evaluación global.")
-    else:
-        resultados_lote = []
-        for _, row in df_animales.iterrows():
-            res = db.calcular_evaluacion_destete(row['id'])
-            if res:
-                resultados_lote.append({
-                    "SINIIGA": row['siniiga'],
-                    "Sexo": row['sexo'],
-                    "Edad Madre (años)": row['edad_madre_anos'],
-                    "Días Destete": res['dias_al_destete'],
-                    "GDP (kg/día)": res['gdp_kg_dia'],
-                    "Peso Ajustado 205 kg": res['peso_ajustado_205']
-                })
-        
-        if len(resultados_lote) > 0:
-            df_lote = pd.DataFrame(resultados_lote)
-            media_lote = df_lote["Peso Ajustado 205 kg"].mean()
-            desviacion_lote = df_lote["Peso Ajustado 205 kg"].std() if len(df_lote) > 1 else 0
-
-            def clasificar_animal(peso):
-                if pd.isna(desviacion_lote) or desviacion_lote == 0:
-                    return "Promedio"
-                if peso >= (media_lote + 0.5 * desviacion_lote):
-                    return "⭐ Superior (Reemplazo / Destacado)"
-                elif peso <= (media_lote - 0.5 * desviacion_lote):
-                    return "⚠️ Inferior (Revisar Vientre)"
-                else:
-                    return "✔️ Promedio del Hato"
-
-            df_lote["Clasificación Genética"] = df_lote["Peso Ajustado 205 kg"].apply(clasificar_animal)
-            st.metric("Promedio del Peso Ajustado del Hato", f"{round(media_lote, 2)} kg")
-            st.dataframe(df_lote, use_container_width=True)
-        else:
-            st.info("Ningún animal cuenta con los registros completos de Nacimiento y Destete.")
-
-elif choice == "Nutrición y Raciones Regionales":
-    st.header("🌾 Módulo Nutricional Estratégico (Cañón de Tlaltenango)")
-    st.markdown("Simulación de requerimientos de Consumo de Materia Seca (CMS) y formulación de suplementación basada en **recursos locales** (agostadero y esquilmos agrícolas).")
-
-    with st.form("form_nutricion"):
-        lote_nombre = st.text_input("Nombre del Lote de Ganado", value="Vacas Vientre - Agostadero Principal")
-        etapa = st.selectbox("Etapa Fisiológica", [
-            "Gestación Avanzada (Último Tercio)", 
-            "Lactancia Temprana (0 - 90 días postparto)", 
-            "Mantenimiento / Vaca Horra", 
-            "Vaquillas de Reemplazo en Crecimiento"
-        ])
-        peso_promedio = st.number_input("Peso Vivo Promedio del Lote (kg)", min_value=300.0, max_value=700.0, value=450.0)
-        estacion = st.selectbox("Condición Estacional Actual", ["Estiaje / Secas (Agostadero seco + Rastrojo)", "Lluvias / Temporal (Pastizal verde abundante)"])
-        
-        submitted_nut = st.form_submit_button("Simular Requerimientos y Dieta")
-
-    if submitted_nut:
-        # Cálculo estimado de Consumo de Materia Seca (CMS) como porcentaje del peso vivo según etapa
-        if "Lactancia" in etapa:
-            porcentaje_cms = 0.026  # 2.6% del PV
-        elif "Gestación Avanzada" in etapa:
-            porcentaje_cms = 0.022  # 2.2% del PV
-        elif "Crecimiento" in etapa:
-            porcentaje_cms = 0.025  # 2.5% del PV
-        else:
-            porcentaje_cms = 0.020  # 2.0% del PV
-
-        cms_total = peso_promedio * porcentaje_cms
-
-        st.success("Simulación Nutricional Generada Correctamente")
-        
+if choice == "Inventario y Altas":
+    st.header("📝 Alta de Reproductor / Vientre / Cría")
+    with st.form("form_alta_avanzada"):
         col1, col2 = st.columns(2)
-        col1.metric("Consumo de Materia Seca (CMS) Esperado", f"{round(cms_total, 2)} kg/día")
-        col2.metric("Consumo como % del Peso Vivo", f"{porcentaje_cms * 100}%")
-
-        st.subheader("📋 Recomendación de Suplementación Local")
+        with col1:
+            siniiga = st.text_input("SINIIGA Oficial")
+            arete = st.text_input("Arete Interno / Ganadería")
+            categoria = st.selectbox("Categoría Zootécnica", ["VIENTRE (VACA)", "REEMPLAZO (VAQUILLA)", "CRIA", "TORO REPRODUCTOR"])
+            raza = st.text_input("Composición Racial (ej. 3/4 Simmental 1/4 Brahman)")
+        with col2:
+            sexo = st.selectbox("Sexo", ["MACHO", "HEMBRA"])
+            fecha_nacimiento = st.date_input("Fecha de Nacimiento")
+            edad_madre = st.number_input("Edad de la Madre al Parto (Años)", 1.5, 15.0, 4.0, 0.5)
+            ce = st.number_input("Circunferencia Escrotal (cm) [Solo si es Toro, min. 32 cm]", 25.0, 50.0, 34.0, help="Indicador de fertilidad propia y precocidad sexual en hijas.")
         
-        if "Estiaje" in estacion:
-            suplemento = "Base de Rastrojo de Maíz ad libitum + 1.5 a 2.0 kg/día de suplemento energético-proteico (Melaza + Grano local / Pasta) y Bloque Mineral con Fósforo."
-            st.warning("⚠️ **Condición de Estiaje detectada:** El agostadero local tiene baja proteína (< 6%). Es crítico aportar nitrógeno no proteico o proteína verdadera para mantener la actividad celulolítica de la panza y evitar caídas en la condición corporal.")
-        else:
-            suplemento = "Pastoreo exclusivo en agostadero verde de temporal + Mezcla de Sales Minerales con micro minerales."
-            st.info("✔️ **Época de Lluvias detectada:** El pastizal nativo cubre los requerimientos de mantenimiento y gestación media. Solo asegurar libre acceso a minerales completos.")
+        sub = st.form_submit_button("Registrar en Base Científica")
+        if sub:
+            if siniiga:
+                exito, msg = db.registrar_animal(siniiga, arete, categoria, raza, sexo, str(fecha_nacimiento), edad_madre, ce if categoria == "TORO REPRODUCTOR" else None)
+                if exito: st.success(msg)
+                else: st.warning(msg)
+            else:
+                st.error("El SINIIGA es obligatorio.")
 
-        st.markdown(f"**Dieta Sugerida para el Lote:** {suplemento}")
+elif choice == "Control de Condición Corporal (CC 1-9)":
+    st.header("⚖️ Monitoreo de Condición Corporal y Estado Nutricional")
+    st.markdown("La investigación en rumiantes demuestra que la CC al parto es el factor determinante absoluto del intervalo entre partos.")
+    
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("Registre animales en el inventario.")
+    else:
+        dict_an = {f"{r['siniiga']} - {r['categoria']}": r['id'] for _, r in df.iterrows()}
+        sel = st.selectbox("Seleccionar Animal", list(dict_an.keys()))
+        id_sel = dict_an[sel]
         
-        # Guardar en base de datos local
-        db.guardar_registro_nutricion(lote_nombre, etapa, peso_promedio, estacion, suplemento)
+        with st.form("form_cc"):
+            tipo_p = st.selectbox("Momento Fisiológico de Evaluación", ["PREPARTO (Último Tercio)", "PARTO", "EMPADRE / SERVICIO", "DESTETE"])
+            f_p = st.date_input("Fecha de Evaluación")
+            peso = st.number_input("Peso vivo (kg)", 300.0, 900.0, 480.0)
+            cc = st.slider("Condición Corporal (Escala BIF 1 a 9)", 1, 9, 5, help="1=Esquelética, 5-6=Óptima al parto, 9=Obesa.")
+            
+            sub_cc = st.form_submit_button("Registrar CC y Peso")
+            if sub_cc:
+                db.registrar_pesaje(id_sel, tipo_p, str(f_p), peso, cc)
+                if cc < 5:
+                    st.warning("⚠️ **Alerta Nutricional:** CC inferior al óptimo (5-6). Riesgo elevado de anestro prolongado postparto. Se requiere suplementación energética-proteica inmediata.")
+                else:
+                    st.success("✅ Condición corporal dentro de parámetros óptimos de eficiencia.")
+
+elif choice == "Gestión Reproductiva y Anestro":
+    st.header("🔄 Seguimiento Reproductivo y Eficiencia del Hato")
+    df = db.obtener_animales()
+    df_v = df[df['categoria'].isin(['VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)'])]
+    
+    if df_v.empty:
+        st.info("No hay vientres registrados.")
+    else:
+        v_dict = {f"{r['siniiga']} ({r['raza']})": r['id'] for _, r in df_v.iterrows()}
+        v_sel = st.selectbox("Vientre Seleccionado", list(v_dict.keys()))
+        v_id = v_dict[v_sel]
+        
+        with st.form("form_repro_av"):
+            evento = st.selectbox("Evento
