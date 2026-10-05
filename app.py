@@ -345,7 +345,7 @@ if choice == "Inventario y Altas":
                 st.error("El SINIIGA es obligatorio.")
 
 elif choice == "Control de Condición Corporal (CC 1-9)":
-    st.header("⚖️️ Monitoreo de Condición Corporal y Estado Nutricional")
+    st.header("⚖️ Monitoreo de Condición Corporal y Estado Nutricional")
     st.markdown("La CC al parto es el factor determinante absoluto del intervalo entre partos en agostadero.")
     
     df = db.obtener_animales()
@@ -389,7 +389,6 @@ elif choice == "⭐ Optimizador de Raciones & Agostadero (Ventaja Competitiva)":
             precio_soya = st.number_input("Pasta de Soya", 8000.0, 18000.0, 12500.0)
 
         if st.button("Ejecutar Optimización de Costo Mínimo"):
-            costo_diario_est = (
-                (peso_vaca_op * 0.025) * 
-                (
-                    (precio_rastrojo / 1000) * 0.6 +
+            costo_diario_est = (peso_vaca_op * 0.025) * ((precio_rastrojo / 1000 * 0.6) + (precio_melaza / 1000 * 0.2) + (precio_soya / 1000 * 0.2))
+            st.success("✅ **Ración Óptima Calculada por el Sistema Exclusivo:**")
+            st.metric("Costo Diario Estimado por Vient
