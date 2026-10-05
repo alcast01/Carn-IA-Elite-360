@@ -101,7 +101,6 @@ if not st.session_state['autenticado'] or not st.session_state['paso_2fa']:
         
         if btn_login:
             totp = pyotp.TOTP(SECRET_TOTP_PROPIETARIO)
-            # valid_window=2 permite tolerancia de tiempo de ±1 minuto para evitar rechazos por desfase horario
             token_valido = totp.verify(totp_input, valid_window=2)
             
             if user_input == USUARIO_PRINCIPAL and pass_input == PASSWORD_PRINCIPAL:
@@ -111,11 +110,11 @@ if not st.session_state['autenticado'] or not st.session_state['paso_2fa']:
                     st.success("✅ Acceso autorizado. Cargando plataforma...")
                     st.rerun()
                 else:
-                    st.error("❌ Código 2FA inválido o expirado. Verifique su aplicación autenticadora (asegúrese de que la hora de su celular esté sincronizada por red).")
+                    st.error("❌ Código 2FA inválido o expirado. Verifique su aplicación autenticadora.")
             else:
                 st.error("❌ Usuario o contraseña incorrectos.")
     
-    st.info(f"💡 **Ayuda 2FA:** Si es la primera vez que configuras Google Authenticator, añade una cuenta manual con la clave secreta: `{SECRET_TOTP_PROPIETARIO}`")
+    st.info(f"💡 **Ayuda 2FA:** Clave secreta para Google Authenticator: `{SECRET_TOTP_PROPIETARIO}`")
     st.stop()
 
 # --- CLASE DE GESTIÓN Y LÓGICA DE DATOS ---
@@ -413,4 +412,5 @@ elif choice == "⭐ Optimizador de Raciones & Agostadero (Ventaja Competitiva)":
                     (precio_soya / 1000) * 0.2
                 )
             )
-            st.success("✅ **Ración Óptima Calculada por el Sistema Exclusivo:**
+            st.success("✅ **Ración Óptima Calculada por el Sistema Exclusivo:**")
+            st
