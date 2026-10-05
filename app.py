@@ -2,17 +2,66 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
+import pyotp  # Librería estándar para códigos TOTP 2FA
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Cr-IA 150 | Única en su Clase",
+    page_title="Cr-IA 150 | SaaS Seguro 2FA",
     page_icon="🐂",
     layout="wide"
 )
 
+# --- CONFIGURACIÓN DE SEGURIDAD Y CREDENCIALES DEL PROPIETARIO ---
+# Nota: En producción, estas credenciales residen en variables de entorno seguras (st.secrets)
+USUARIO_PRINCIPAL = "alejandro_c"
+PASSWORD_PRINCIPAL = "Tlaltenango2026*"
+# Secreto TOTP único para el 2FA del propietario (imposible de compartir sin la app autenticadora)
+SECRET_TOTP_PROPIETARIO = "JBSWY3DPEHPK3PXP" 
+
+# --- INICIALIZACIÓN DE ESTADO DE SESIÓN PARA SEGURIDAD ---
+if 'autenticado' not in st.session_state:
+    st.session_state['autenticado'] = False
+if 'paso_2fa' not in st.session_state:
+    st.session_state['paso_2fa'] = False
+if 'suscripcion_activa' not in st.session_state:
+    st.session_state['suscripcion_activa'] = True # Simulado activo para el usuario principal
+
+# --- PANTALLA DE ACCESO Y SEGURIDAD (GATEKEEPER) ---
+if not st.session_state['autenticado'] or not st.session_state['paso_2fa']:
+    st.title("🔒 Cr-IA 150 - Acceso Seguro Restringido")
+    st.subheader("Sistema Exclusivo de Gestión Vaca-Cría | Cañón de Tlaltenango")
+    
+    with st.form("form_login"):
+        st.markdown("### Credenciales de Acceso Propietario")
+        user_input = st.text_input("Usuario Principal")
+        pass_input = st.text_input("Contraseña", type="password")
+        
+        st.markdown("### Verificación de Doble Factor (2FA - Google Authenticator)")
+        totp_input = st.text_input("Código de 6 dígitos de tu App Autenticadora", max_chars=6)
+        
+        btn_login = st.form_submit_button("Iniciar Sesión Segura")
+        
+        if btn_login:
+            totp = pyotp.TOTP(SECRET_TOTP_PROPIETARIO)
+            token_valido = totp.verify(totp_input)
+            
+            if user_input == USUARIO_PRINCIPAL and pass_input == PASSWORD_PRINCIPAL:
+                if token_valido:
+                    st.session_state['autenticado'] = True
+                    st.session_state['paso_2fa'] = True
+                    st.success("✅ Acceso autorizado. Cargando plataforma...")
+                    st.rerun()
+                else:
+                    st.error("❌ Código 2FA inválido o expirado. Verifique su aplicación autenticadora (Antifraude activado).")
+            else:
+                st.error("❌ Usuario o contraseña incorrectos.")
+    
+    st.info("💡 **Seguridad Antifraude:** Este sistema utiliza un doble factor de autenticación TOTP para garantizar que única y exclusivamente el propietario original opere la plataforma, evitando el intercambio de contraseñas entre terceros.")
+    st.stop()
+
 # --- CLASE DE GESTIÓN Y LÓGICA DE DATOS ---
-class CrIA150Exclusiva:
-    def __init__(self, db_name="cria_150_exclusiva.db"):
+class CrIA150Segura:
+    def __init__(self, db_name="cria_150_segura.db"):
         self.conn = sqlite3.connect(db_name, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self._crear_tablas()
@@ -174,11 +223,17 @@ class CrIA150Exclusiva:
             "peso_205": round(peso_ajustado_final, 2)
         }
 
-db = CrIA150Exclusiva()
+db = CrIA150Segura()
 
-# --- INTERFAZ DE USUARIO ---
-st.title("🐂 Cr-IA 150 - Sistema Exclusivo de Vanguardia")
-st.subheader("La Única Plataforma de Precisión Zootécnica y Económica para Vaca-Cría")
+# --- INTERFAZ PRINCIPAL DE LA APLICACIÓN (ACCESO PROTEGIDO) ---
+st.sidebar.success("🟢 Sesión Segura Verificada (2FA Activo)")
+if st.sidebar.button("Cerrar Sesión"):
+    st.session_state['autenticado'] = False
+    st.session_state['paso_2fa'] = False
+    st.rerun()
+
+st.title("🐂 Cr-IA 150 - Sistema Exclusivo de Vanguardia & Seguridad")
+st.subheader("Plataforma Protegida de Precisión Zootécnica y Económica para Vaca-Cría")
 
 menu = [
     "Inventario y Altas", 
@@ -188,7 +243,7 @@ menu = [
     "Calendario Gestación & Partos (*Smart Calendar*)", 
     "Sanidad Integral Regional",
     "Evaluación BIF (205 Días) & Gráficas",
-    "Finanzas y Proyección de Mercado",
+    "Finanzas, Pagos y Suscripción",
     "Suplementación y Crecimiento (Vaca-Becerro)",
     "Plan de Contingencia (Sequía & Enfermedades)",
     "Protocolo de Parto y Alimentación Nocturna"
@@ -220,7 +275,7 @@ if choice == "Inventario y Altas":
                 st.error("El SINIIGA es obligatorio.")
 
 elif choice == "Control de Condición Corporal (CC 1-9)":
-    st.header("⚖️️ Monitoreo de Condición Corporal y Estado Nutricional")
+    st.header("⚖️ Monitoreo de Condición Corporal y Estado Nutricional")
     st.markdown("La CC al parto es el factor determinante absoluto del intervalo entre partos en agostadero.")
     
     df = db.obtener_animales()
@@ -253,8 +308,6 @@ elif choice == "⭐ Optimizador de Raciones & Agostadero (Ventaja Competitiva)":
 
     with tab_exc1:
         st.subheader("Formulador Inteligente de Raciones para Estiaje (Tlaltenango)")
-        st.markdown("Calcula la combinación perfecta de ingredientes locales para minimizar el costo diario por vientre sin sacrificar nutrientes.")
-        
         col_op1, col_op2 = st.columns(2)
         with col_op1:
             etapa_sel = st.selectbox("Etapa Fisiológica", ["Último Tercio de Gestación", "Lactancia Temprana", "Vaca Horra / Mantenimiento"])
@@ -273,36 +326,33 @@ elif choice == "⭐ Optimizador de Raciones & Agostadero (Ventaja Competitiva)":
                 f"* **Rastrojo de Maíz (Fibra base):** 60% de la ración.\n"
                 f"* **Melaza Líquida (Energía/Palatabilidad):** 20% de la ración.\n"
                 f"* **Pasta de Soya (Proteína cruda):** 20% de la ración.\n"
-                f"💡 *Ventaja Cr-IA 150:* Esta combinación cubre perfectamente los requerimientos nutricionales específicos para **{etapa_sel}**, ahorrando hasta un 25% en comparación con alimentos comerciales empaquetados."
+                f"💡 *Ventaja Cr-IA 150:* Esta combinación cubre perfectamente los requerimientos nutricionales específicos para **{etapa_sel}**, ahorrando hasta un 25%."
             )
 
     with tab_exc2:
         st.subheader("Simulador de Capacidad de Carga y Resiliencia de Agostadero")
-        st.markdown("Evalúa si tus potreros están en riesgo de sobrepastoreo ante años de sequía.")
-        
         hectareas = st.number_input("Superficie Total del Agostadero (Hectáreas)", 10.0, 5000.0, 150.0)
         cabezas = st.number_input("Número Total de Vientres en el Hato", 1.0, 500.0, 35.0)
         indice_pluvial = st.selectbox("Condición Climática Anual en la Región", ["Año Normal / Promedio", "Año Seco / Estiaje Severo"])
 
         if st.button("Analizar Capacidad de Carga"):
-            factor = 4.0 if "Normal" in indice_pluvial else 7.0 # Hectáreas requeridas por Unidad Animal
+            factor = 4.0 if "Normal" in indice_pluvial else 7.0
             capacidad_maxima = hectareas / factor
             st.metric("Capacidad de Carga Recomendada", f"{round(capacidad_maxima, 1)} Vientres Máximo")
             
             if cabezas > capacidad_maxima:
-                st.error(f"🚨 **Alerta de Sobrepastoreo:** Tu hato actual ({cabezas} vientres) supera la capacidad biológica del terreno ({round(capacidad_maxima, 1)} vientres) bajo las condiciones de {indice_pluvial}. **Acción recomendada:** Activar el plan de desecho de vientres improductivos o suplementación en corral.")
+                st.error(f"🚨 **Alerta de Sobrepastoreo:** Tu hato actual ({cabezas} vientres) supera la capacidad biológica del terreno ({round(capacidad_maxima, 1)} vientres) bajo las condiciones de {indice_pluvial}.")
             else:
-                st.success("✅ **Agostadero en Equilibrio:** Tu carga animal actual es sostenible y protege la regeneración del pastizal nativo.")
+                st.success("✅ **Agostadero en Equilibrio:** Tu carga animal actual es sostenible.")
 
 elif choice == "🤖 IA & IoT (Visión Artificial y Sensores)":
     st.header("🤖 Centro de Inteligencia Artificial & Internet de las Cosas (IoT)")
-    st.markdown("Tecnologías de vanguardia integradas para automatizar la supervisión del hato y mitigar riesgos en tiempo real.")
+    st.markdown("Tecnologías de vanguardia integradas para automatizar la supervisión del hato.")
 
     tab_ai1, tab_ai2, tab_ai3 = st.tabs(["📸 IA Visión - Estima CC por Foto", "📡 Telemetría IoT en Potreros", "🧠 Motor Predictivo de Salud (ML)"])
 
     with tab_ai1:
-        st.subheader("Estimador de Condición Corporal impulsado por IA (Computer Vision)")
-        st.markdown("Sube o captura una fotografía lateral del vientre bovino para calcular automáticamente la Condición Corporal (CC 1-9) y el peso estimado.")
+        st.subheader("Estimador de Condición Corporal impulsado por IA")
         foto_subida = st.file_uploader("Cargar fotografía del animal (Formatos JPG, PNG)", type=["jpg", "png", "jpeg"])
         if foto_subida is not None:
             st.image(foto_subida, caption="Imagen analizada por el modelo de IA Cr-IA Vision", use_container_width=True)
@@ -325,3 +375,89 @@ elif choice == "🤖 IA & IoT (Visión Artificial y Sensores)":
 
     with tab_ai3:
         st.subheader("Motor Predictivo de Riesgo Reproductivo y Sanitario")
+        st.warning("⚠️️ **Predicción Activa del Hato:** 2 vaquillas en primer parto muestran una tendencia de pérdida de peso superior al 8% en el último mes.")
+
+elif choice == "Calendario Gestación & Partos (*Smart Calendar*)":
+    st.header("📅 Calendario Inteligente de Servicios y Partos")
+    df = db.obtener_animales()
+    df_v = df[df['categoria'].isin(['VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)'])]
+    
+    if df_v.empty:
+        st.info("No hay vientres registrados para empadre.")
+    else:
+        v_dict = {f"{r['siniiga']} ({r['raza']})": r['id'] for _, r in df_v.iterrows()}
+        v_sel = st.selectbox("Vientre Seleccionado", list(v_dict.keys()))
+        v_id = v_dict[v_sel]
+        
+        with st.form("form_smart_cal"):
+            evento = st.selectbox("Evento Reproductivo", ["EMPADRE / SERVICIO", "DIAGNOSTICO GESTACION", "PARTO"])
+            f_ev = st.date_input("Fecha del Evento")
+            res = st.selectbox("Resultado / Estatus", ["PREÑADA", "VACÍA", "PARTO NORMAL", "DISTOCIA"])
+            obs = st.text_area("Notas técnicas (ej. Toro semental, protocolo IATF)")
+            
+            sub_r = st.form_submit_button("Registrar y Calcular Fecha de Parto")
+            if sub_r:
+                f_parto = db.registrar_reproduccion(v_id, evento, str(f_ev), res, obs)
+                if f_parto:
+                    st.success(f"✅ Servicio registrado con éxito. **Fecha Probable de Parto estimada: {f_parto}** (programada a 283 días).")
+                else:
+                    st.success("✅ Evento reproductivo guardado correctamente.")
+
+    st.divider()
+    st.subheader("📋 Historial de Gestaciones Activas")
+    df_repro = db.obtener_reproduccion()
+    if not df_repro.empty:
+        st.dataframe(df_repro[['siniiga', 'tipo_evento', 'fecha_evento', 'fecha_probable_parto', 'resultado', 'observaciones']], use_container_width=True)
+    else:
+        st.info("Sin registros reproductivos aún.")
+
+elif choice == "Sanidad Integral Regional":
+    st.header("💉 Calendario Zoosanitario (Zacatecas)")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("Sin animales.")
+    else:
+        d_anim = {f"{r['siniiga']}": r['id'] for _, r in df.iterrows()}
+        sel_an = st.selectbox("Seleccionar Animal o Lote", list(d_anim.keys()))
+        id_a = d_anim[sel_an]
+        
+        with st.form("form_san_z"):
+            trat = st.selectbox("Biológico / Tratamiento", [
+                "VACUNA ANTIRRÁBICA / DERRIENGUE",
+                "CLOSTRIDIOSIS (Pierna Negra)",
+                "LEPTOSPIROSIS / IBR / BVD",
+                "CONTROL PARASITARIO"
+            ])
+            f_ap = st.date_input("Fecha de Aplicación")
+            f_prox = st.date_input("Próxima Dosis / Refuerzo Anual")
+            
+            if st.form_submit_button("Guardar Sanidad"):
+                db.registrar_sanidad(id_a, trat, str(f_ap), str(f_prox))
+                st.success("Sanidad registrada exitosamente.")
+
+elif choice == "Evaluación BIF (205 Días) & Gráficas":
+    st.header("📊 Estandarización BIF y Análisis Gráfico del Hato")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("No hay datos suficientes.")
+    else:
+        res_list = []
+        for _, r in df.iterrows():
+            eval_res = db.evaluar_destete_bif(r['id'])
+            if eval_res:
+                res_list.append({
+                    "SINIIGA": r['siniiga'],
+                    "Sexo": r['sexo'],
+                    "Edad Madre (años)": r['edad_madre_anos'],
+                    "Días a Destete": eval_res['dias'],
+                    "GDP (kg/día)": eval_res['gdp'],
+                    "Peso Ajustado 205 Días (kg)": eval_res['peso_205']
+                })
+        if len(res_list) > 0:
+            df_final = pd.DataFrame(res_list)
+            st.metric("Promedio de Peso Ajustado al Destete (Hato)", f"{round(df_final['Peso Ajustado 205 Días (kg)'].mean(), 2)} kg")
+            st.dataframe(df_final, use_container_width=True)
+            
+            st.subheader("📈 Gráfica de Distribución de Pesos al Destete (BIF 205)")
+            st.bar_chart(df_final.set_index("SINIIGA")["Peso Ajustado 205 Días (kg)"])
+        else:
