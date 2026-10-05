@@ -2,7 +2,6 @@ import streamlit as st
 import sqlite3
 import pandas as pd
 from datetime import datetime, timedelta
-import pyotp  # Librería estándar para códigos TOTP 2FA
 
 # Configuración de la página
 st.set_page_config(
@@ -74,18 +73,15 @@ st.markdown("""
 # --- CONFIGURACIÓN DE SEGURIDAD Y CREDENCIALES DEL PROPIETARIO ---
 USUARIO_PRINCIPAL = "alejandro_c"
 PASSWORD_PRINCIPAL = "Tlaltenango2026*"
-SECRET_TOTP_PROPIETARIO = "JBSWY3DPEHPK3PXP" 
 
 # --- INICIALIZACIÓN DE ESTADO DE SESIÓN PARA SEGURIDAD ---
 if 'autenticado' not in st.session_state:
     st.session_state['autenticado'] = False
-if 'paso_2fa' not in st.session_state:
-    st.session_state['paso_2fa'] = False
 if 'suscripcion_activa' not in st.session_state:
     st.session_state['suscripcion_activa'] = True
 
-# --- PANTALLA DE ACCESO Y SEGURIDAD (GATEKEEPER) ---
-if not st.session_state['autenticado'] or not st.session_state['paso_2fa']:
+# --- PANTALLA DE ACCESO Y SEGURIDAD (GATEKEEPER SIN 2FA) ---
+if not st.session_state['autenticado']:
     st.title("🔒 Cr-IA 150 - Acceso Seguro Restringido")
     st.subheader("Sistema Exclusivo de Gestión Vaca-Cría | Cañón de Tlaltenango")
     
@@ -94,27 +90,17 @@ if not st.session_state['autenticado'] or not st.session_state['paso_2fa']:
         user_input = st.text_input("Usuario Principal", value="alejandro_c")
         pass_input = st.text_input("Contraseña", type="password", value="Tlaltenango2026*")
         
-        st.markdown("### Verificación de Doble Factor (2FA - Google Authenticator)")
-        totp_input = st.text_input("Código de 6 dígitos de tu App Autenticadora", max_chars=6)
-        
         btn_login = st.form_submit_button("Iniciar Sesión Segura")
         
         if btn_login:
-            totp = pyotp.TOTP(SECRET_TOTP_PROPIETARIO)
-            token_valido = totp.verify(totp_input, valid_window=2)
-            
             if user_input == USUARIO_PRINCIPAL and pass_input == PASSWORD_PRINCIPAL:
-                if token_valido:
-                    st.session_state['autenticado'] = True
-                    st.session_state['paso_2fa'] = True
-                    st.success("✅ Acceso autorizado. Cargando plataforma...")
-                    st.rerun()
-                else:
-                    st.error("❌ Código 2FA inválido o expirado. Verifique su aplicación autenticadora.")
+                st.session_state['autenticado'] = True
+                st.success("✅ Acceso autorizado. Cargando plataforma...")
+                st.rerun()
             else:
                 st.error("❌ Usuario o contraseña incorrectos.")
     
-    st.info(f"💡 **Ayuda 2FA:** Clave secreta para Google Authenticator: `{SECRET_TOTP_PROPIETARIO}`")
+    st.info("💡 **Acceso Directo:** Ingresa con tus credenciales de creador para administrar el hato.")
     st.stop()
 
 # --- CLASE DE GESTIÓN Y LÓGICA DE DATOS ---
@@ -284,10 +270,9 @@ class CrIA150Segura:
 db = CrIA150Segura()
 
 # --- INTERFAZ PRINCIPAL DE LA APLICACIÓN (ACCESO PROTEGIDO) ---
-st.sidebar.success("🟢 Sesión Segura Verificada (2FA Activo)")
+st.sidebar.success("🟢 Sesión Activa (Propietario)")
 if st.sidebar.button("Cerrar Sesión"):
     st.session_state['autenticado'] = False
-    st.session_state['paso_2fa'] = False
     st.rerun()
 
 # --- LOGOTIPO DE VANGUARDIA, SLOGAN EMPRESARIAL Y CRÉDITOS ---
@@ -331,86 +316,4 @@ menu = [
     "Plan de Contingencia (Sequía & Enfermedades)",
     "Protocolo de Parto y Alimentación Nocturna"
 ]
-choice = st.sidebar.selectbox("Módulos del Sistema", menu)
-
-if choice == "Inventario y Altas":
-    st.header("📝 Alta de Reproductor / Vientre / Cría")
-    with st.form("form_alta_avanzada"):
-        col1, col2 = st.columns(2)
-        with col1:
-            siniiga = st.text_input("SINIIGA Oficial")
-            arete = st.text_input("Arete Interno / Ganadería")
-            categoria = st.selectbox("Categoría Zootécnica", ["VIENTRE (VACA)", "REEMPLAZO (VAQUILLA)", "CRIA", "TORO REPRODUCTOR"])
-            raza = st.text_input("Composición Racial (ej. 3/4 Simmental 1/4 Brahman)")
-        with col2:
-            sexo = st.selectbox("Sexo", ["MACHO", "HEMBRA"])
-            fecha_nacimiento = st.date_input("Fecha de Nacimiento")
-            edad_madre = st.number_input("Edad de la Madre al Parto (Años)", 1.5, 15.0, 4.0, 0.5)
-            ce = st.number_input("Circunferencia Escrotal (cm) [Solo si es Toro, min. 32 cm]", 25.0, 50.0, 34.0)
-        
-        sub = st.form_submit_button("Registrar en Base de Datos")
-        if sub:
-            if siniiga:
-                exito, msg = db.registrar_animal(siniiga, arete, categoria, raza, sexo, str(fecha_nacimiento), edad_madre, ce if categoria == "TORO REPRODUCTOR" else None)
-                if exito:
-                    st.success(msg)
-                else:
-                    st.warning(msg)
-            else:
-                st.error("El SINIIGA es obligatorio.")
-
-elif choice == "Control de Condición Corporal (CC 1-9)":
-    st.header("⚖️ Monitoreo de Condición Corporal y Estado Nutricional")
-    st.markdown("La CC al parto es el factor determinante absoluto del intervalo entre partos en agostadero.")
-    
-    df = db.obtener_animales()
-    if df.empty:
-        st.info("Registre animales en el inventario.")
-    else:
-        dict_an = {f"{r['siniiga']} - {r['categoria']}": r['id'] for _, r in df.iterrows()}
-        sel = st.selectbox("Seleccionar Animal", list(dict_an.keys()))
-        id_sel = dict_an[sel]
-        
-        with st.form("form_cc"):
-            tipo_p = st.selectbox("Momento Fisiológico de Evaluación", ["PREPARTO (Último Tercio)", "PARTO", "EMPADRE / SERVICIO", "DESTETE"])
-            f_p = st.date_input("Fecha de Evaluación")
-            peso = st.number_input("Peso vivo (kg)", 300.0, 900.0, 480.0)
-            cc = st.slider("Condición Corporal (Escala BIF 1 a 9)", 1, 9, 5)
-            
-            sub_cc = st.form_submit_button("Registrar CC y Peso")
-            if sub_cc:
-                db.registrar_pesaje(id_sel, tipo_p, str(f_p), peso, cc)
-                if cc < 5:
-                    st.warning("⚠️ Alerta Nutricional: CC inferior al óptimo (5-6). Riesgo elevado de anestro prolongado postparto.")
-                else:
-                    st.success("✅ Condición corporal dentro de parámetros óptimos.")
-
-elif choice == "⭐ Optimizador de Raciones & Agostadero (Ventaja Competitiva)":
-    st.header("⭐ Módulo Exclusivo: Optimizador de Costos y Capacidad de Carga")
-    st.markdown("La herramienta inteligente que ninguna otra aplicación comercial tiene: cálculo de raciones locales de mínimo costo y análisis de resiliencia de agostadero.")
-
-    tab_exc1, tab_exc2 = st.tabs(["🧮 Optimizador de Raciones de Mínimo Costo", "🌿 Simulador de Capacidad de Carga (Agostadero)"])
-
-    with tab_exc1:
-        st.subheader("Formulador Inteligente de Raciones para Estiaje (Tlaltenango)")
-        col_op1, col_op2 = st.columns(2)
-        with col_op1:
-            etapa_sel = st.selectbox("Etapa Fisiológica", ["Último Tercio de Gestación", "Lactancia Temprana", "Vaca Horra / Mantenimiento"])
-            peso_vaca_op = st.number_input("Peso Promedio del Vientre (kg)", 350.0, 700.0, 480.0)
-        with col_op2:
-            st.markdown("**Precios Locales Estimados (MXN / Tonelada):**")
-            precio_rastrojo = st.number_input("Rastrojo de Maíz Molido", 1500.0, 4000.0, 2500.0)
-            precio_melaza = st.number_input("Melaza Líquida", 3000.0, 8000.0, 4800.0)
-            precio_soya = st.number_input("Pasta de Soya", 8000.0, 18000.0, 12500.0)
-
-        if st.button("Ejecutar Optimización de Costo Mínimo"):
-            costo_diario_est = (
-                (peso_vaca_op * 0.025) * 
-                (
-                    (precio_rastrojo / 1000) * 0.6 + 
-                    (precio_melaza / 1000) * 0.2 + 
-                    (precio_soya / 1000) * 0.2
-                )
-            )
-            st.success("✅ **Ración Óptima Calculada por el Sistema Exclusivo:**")
-            st
+choice = st.sidebar.selectbox("Módulos del
