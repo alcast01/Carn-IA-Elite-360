@@ -322,4 +322,104 @@ elif choice == "Evaluación BIF (205 Días) & Gráficas":
                 })
         if len(res_list) > 0:
             df_final = pd.DataFrame(res_list)
-            st.metric("Prom
+            st.metric("Promedio de Peso Ajustado al Destete (Hato)", f"{round(df_final['Peso Ajustado 205 Días (kg)'].mean(), 2)} kg")
+            st.dataframe(df_final, use_container_width=True)
+            
+            st.subheader("📈 Gráfica de Distribución de Pesos al Destete (BIF 205)")
+            st.bar_chart(df_final.set_index("SINIIGA")["Peso Ajustado 205 Días (kg)"])
+        else:
+            st.info("Registre pesajes de Nacimiento y Destete en los animales para calcular los ajustes BIF y generar gráficas.")
+
+elif choice == "Finanzas y Proyección de Mercado":
+    st.header("💰 Economía, Costos y Proyección de Ingresos por Vientre")
+    st.markdown("Evalúa la rentabilidad del hato integrando costos operativos reales y el precio de mercado del ternero al destete.")
+    
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        precio_venta_kg = st.number_input("Precio Esperado de Venta en Mercado (MXN por kg de ternero)", min_value=30.0, max_value=120.0, value=68.0)
+    
+    st.divider()
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("Registre animales y costos para ver proyecciones financieras.")
+    else:
+        d_anim = {f"{r['siniiga']} - {r['categoria']}": r['id'] for _, r in df.iterrows()}
+        id_sel_fin = st.selectbox("Seleccionar Animal / Vaca para Registrar Costo Operativo", list(d_anim.keys()))
+        animal_id_f = d_anim[id_sel_fin]
+        
+        with st.form("form_costos"):
+            concepto = st.selectbox("Concepto de Gasto", [
+                "Suplementación Estacional (Melaza/Rastrojo/Proteína)", 
+                "Vacunación y Sanidad", 
+                "Manejo / Mano de Obra / Aretes SINIIGA", 
+                "Servicios Veterinarios / IATF"
+            ])
+            monto = st.number_input("Monto en Pesos (MXN)", min_value=1.0, max_value=50000.0, value=500.0)
+            fecha_g = st.date_input("Fecha del Gasto")
+            
+            if st.form_submit_button("Registrar Gasto en Hato"):
+                db.registrar_costo(animal_id_f, concepto, monto, str(fecha_g))
+                st.success(f"Gasto de ${monto} MXN registrado correctamente.")
+
+    st.divider()
+    st.subheader("📊 Análisis Financiero Consolidado del Hato")
+    df_costos = db.obtener_costos()
+    if not df_costos.empty:
+        total_gastos = df_costos['monto_mxn'].sum()
+        col1, col2 = st.columns(2)
+        col1.metric("Gasto Total Acumulado en el Hato", f"${total_gastos:,.2f} MXN")
+        col2.metric("Total de Registros de Costos", len(df_costos))
+        st.dataframe(df_costos[['siniiga', 'concepto', 'monto_mxn', 'fecha']], use_container_width=True)
+    else:
+        st.info("Sin costos registrados todavía.")
+
+elif choice == "Plan de Contingencia (Sequía & Enfermedades)":
+    st.header("🚨 Plan de Emergencia y Contingencia Ganadera")
+    st.markdown("Protocolos críticos de acción inmediata ante escenarios de sequía extrema, brotes de anaplasmosis o alertas por gusano barrenador.")
+
+    tab1, tab2, tab3 = st.tabs(["🌵 Sequía / Estiaje Severo", "🦠 Anaplasmosis", "🪱 Gusano Barrenador"])
+
+    with tab1:
+        st.subheader("Plan de Respuesta ante Sequía Extrema")
+        st.markdown(
+            "1. **Destete Precoz / Anticipado:** Si el forraje del agostadero cae por debajo del 10% de disponibilidad útil, destetar terneros a los 60-90 días de edad. Esto reduce la demanda energética de la vaca en lactancia en un 35-40%, protegiendo su condición corporal para el siguiente empadre.\n"
+            "2. **Desecho Estratégico:** Venta inmediata de vientres improductivos, vacías diagnosticadas por tacto, vacas con problemas dentales o temperamento agresivo.\n"
+            "3. **Banco de Alimentos Regional:** Activación de raciones de sobrevivencia basadas en rastrojos amonificados o tratados con urea + melaza, evitando pérdidas catastróficas de peso vivo."
+        )
+        if st.button("Activar Protocolo de Emergencia por Sequía"):
+            st.warning("⚠️ **Alerta de Sequía Activada:** Se recomienda exportar reporte de vientres vacíos y programar destetes de emergencia.")
+
+    with tab2:
+        st.subheader("Protocolo Sanitario: Anaplasmosis Bovina")
+        st.markdown(
+            "**Enfermedad hemotrópica transmitida por garrapatas, tábanos y fómites contaminados.**\n\n"
+            "* **Signos Clínicos Clave:** Anemia severa, ictericia (mucosas pálidas/amarillentas), fiebre alta inicial, debilidad extrema y caída súbita en la producción láctea o muerte súbita en animales estresados.\n"
+            "* **Acción Inmediata y Tratamiento:** Aplicación de **Oxitetraciclina de larga acción (LA)** bajo prescripción médico-veterinaria y control estricto de vectores externos (garrapaticidas y baños periódicos)."
+        )
+
+    with tab3:
+        st.subheader("Protocolo Sanitario: Gusano Barrenador (*Cochliomyia hominivorax*)")
+        st.markdown(
+            "**Alerta Sanitaria Crítica:** Infestación por larvas de mosca que se alimentan de tejido vivo en cualquier herida abierta.\n\n"
+            "* **Inspección Obligatoria Diaria:** Revisión rigurosa de ombligos en terneros recién nacidos, heridas por marcas a fuego, castraciones, descornes y lesiones por mordeduras o espinas.\n"
+            "* **Tratamiento y Contención:** Aplicación inmediata de larvicidas curativos en spray/pasta a base de organosfosforados, remoción manual cuidadosa de larvas con pinzas (nunca aplastar dentro de la herida) y reporte sanitario oficial inmediato."
+        )
+
+elif choice == "Protocolo de Parto y Alimentación Nocturna":
+    st.header("🌙 Estrategia Fisiológica de Alimentación Nocturna (Night Feeding)")
+    st.markdown(
+        "**Fundamento Científico:** Investigaciones en fisiología bovina demuestran que ofrecer la ración completa o el suplemento alimenticio "
+        "de mayor peso **al atardecer / noche (17:00 a 21:00 hrs)** desplaza los picos de contracción uterina y el inicio del trabajo de parto "
+        "hacia las **horas diurnas (luz del día)**.\n\n"
+        "*Beneficios comprobados:*\n"
+        "* Reducción drástica de la mortalidad neonatal por atención oportuna de distocias.\n"
+        "* Menor estrés para el personal de rancho durante la época de pariciones en el Cañón de Tlaltenango."
+    )
+    
+    with st.form("form_night_feed"):
+        fecha_inicio_par = st.date_input("Fecha Estimada de Inicio de Parición")
+        horas_sumi = st.selectbox("Horario Programado de Suplementación Nocturna", ["17:00 Horas", "18:30 Horas", "20:00 Horas"])
+        obs_nf = st.text_area("Notas sobre ingredientes (ej. rastrojo de maíz tratado + melaza/urea)")
+        
+        if st.form_submit_button("Activar Protocolo de Parto Diurno"):
+            st.success(f"✅ Protocolo configurado con éxito. El suministro nocturno a las {horas_sumi} iniciará la sincronización metabólica.")
