@@ -11,26 +11,28 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILOS CSS AVANZADOS & LOGO DE VANGUARDIA (MARKETING & UX) ---
+# --- ESTILOS CSS AVANZADOS & LOGO DE VANGUARDIA (MARKETING & UX B2B) ---
 st.markdown("""
     <style>
     .brand-container {
-        background: linear-gradient(135deg, #0d3b22 0%, #1a5c37 50%, #082214 100%);
-        padding: 25px;
-        border-radius: 16px;
+        background: linear-gradient(135deg, #082214 0%, #113f27 50%, #04120a 100%);
+        padding: 30px;
+        border-radius: 18px;
         color: white;
-        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        box-shadow: 0 10px 35px rgba(0,0,0,0.3);
         margin-bottom: 25px;
-        border: 1px solid rgba(212, 175, 55, 0.3);
+        border: 1px solid rgba(212, 175, 55, 0.4);
     }
     .brand-header {
         display: flex;
         align-items: center;
         justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 20px;
     }
     .brand-title {
-        font-size: 2.2rem;
-        font-weight: 800;
+        font-size: 2.5rem;
+        font-weight: 900;
         margin: 0;
         letter-spacing: -0.5px;
         color: #ffffff;
@@ -40,21 +42,31 @@ st.markdown("""
         color: #d4af37; /* Acento Dorado Elite */
     }
     .brand-subtitle {
-        font-size: 1.05rem;
-        color: #a8d5ba;
-        margin-top: 5px;
-        font-weight: 400;
+        font-size: 1.1rem;
+        color: #d1fae5;
+        margin-top: 6px;
+        font-weight: 500;
     }
     .brand-badge {
         background-color: rgba(212, 175, 55, 0.2);
         color: #d4af37;
-        padding: 6px 14px;
-        border-radius: 20px;
+        padding: 8px 16px;
+        border-radius: 25px;
         font-size: 0.85rem;
         font-weight: 700;
         border: 1px solid #d4af37;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 1.5px;
+    }
+    .brand-footer-info {
+        margin-top: 20px;
+        padding-top: 15px;
+        border-top: 1px solid rgba(255, 255, 255, 0.15);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -278,17 +290,30 @@ if st.sidebar.button("Cerrar Sesión"):
     st.session_state['paso_2fa'] = False
     st.rerun()
 
-# --- HEADER Y LOGOTIPO DE VANGUARDIA (SISTEMA VACA-BECERRO) ---
+# --- LOGOTIPO DE VANGUARDIA, SLOGAN EMPRESARIAL Y CRÉDITOS ---
 st.markdown("""
     <div class="brand-container">
         <div class="brand-header">
-            <div>
-                <h1 class="brand-title">Cr-IA <span>150</span></h1>
-                <p class="brand-subtitle">Plataforma de Inteligencia Artificial & Precisión Zootécnica para el Sistema Vaca-Cría</p>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="background: linear-gradient(135deg, #d4af37 0%, #aa8c2c 100%); color: #04120a; font-size: 2.3rem; font-weight: bold; padding: 12px 20px; border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.4); text-align: center; border: 1px solid #fff;">
+                    🐂📈
+                </div>
+                <div>
+                    <h1 class="brand-title">Cr-IA <span>150</span></h1>
+                    <p class="brand-subtitle"><b>Slogan:</b> "De la Ganadería Tradicional a la Empresa Hiperrentable: Eficiencia Zootécnica, Control Financiero y Máximas Ganancias."</p>
+                </div>
             </div>
             <div>
-                <span class="brand-badge">⚡ Elite Edition</span>
+                <span class="brand-badge">Enterprise Elite SaaS</span>
             </div>
+        </div>
+        <div class="brand-footer-info">
+            <p style="margin: 0; font-size: 0.95rem; color: #a8d5ba; font-style: italic;">
+                "Transformando cada kilogramo destetado y cada recurso optimizado en dividendos reales para tu negocio ganadero."
+            </p>
+            <p style="margin: 0; font-size: 0.9rem; color: #ffffff; font-weight: 600;">
+                💻 Aplicación creada y desarrollada por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong>
+            </p>
         </div>
     </div>
 """, unsafe_allow_html=True)
@@ -361,4 +386,22 @@ elif choice == "Control de Condición Corporal (CC 1-9)":
                     st.success("✅ Condición corporal dentro de parámetros óptimos.")
 
 elif choice == "⭐ Optimizador de Raciones & Agostadero (Ventaja Competitiva)":
-    st
+    st.header("⭐ Módulo Exclusivo: Optimizador de Costos y Capacidad de Carga")
+    st.markdown("La herramienta inteligente que ninguna otra aplicación comercial tiene: cálculo de raciones locales de mínimo costo y análisis de resiliencia de agostadero.")
+
+    tab_exc1, tab_exc2 = st.tabs(["🧮 Optimizador de Raciones de Mínimo Costo", "🌿 Simulador de Capacidad de Carga (Agostadero)"])
+
+    with tab_exc1:
+        st.subheader("Formulador Inteligente de Raciones para Estiaje (Tlaltenango)")
+        col_op1, col_op2 = st.columns(2)
+        with col_op1:
+            etapa_sel = st.selectbox("Etapa Fisiológica", ["Último Tercio de Gestación", "Lactancia Temprana", "Vaca Horra / Mantenimiento"])
+            peso_vaca_op = st.number_input("Peso Promedio del Vientre (kg)", 350.0, 700.0, 480.0)
+        with col_op2:
+            st.markdown("**Precios Locales Estimados (MXN / Tonelada):**")
+            precio_rastrojo = st.number_input("Rastrojo de Maíz Molido", 1500.0, 4000.0, 2500.0)
+            precio_melaza = st.number_input("Melaza Líquida", 3000.0, 8000.0, 4800.0)
+            precio_soya = st.number_input("Pasta de Soya", 8000.0, 18000.0, 12500.0)
+
+        if st.button("Ejecutar Optimización de Costo Mínimo"):
+            costo_diario_est = (peso_vaca
