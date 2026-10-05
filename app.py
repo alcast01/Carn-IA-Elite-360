@@ -97,7 +97,7 @@ class CrIA150Avangard:
     def registrar_sanidad(self, animal_id, tratamiento, fecha, prox):
         self.cursor.execute('''
             INSERT INTO sanidad (animal_id, tipo_tratamiento, fecha_aplicacion, proxima_dosis)
-            VALUES (?, ?, ?, ?, ?)
+            VALUES (?, ?, ?, ?)
         ''', (animal_id, tratamiento, fecha, prox))
         self.conn.commit()
 
@@ -227,4 +227,73 @@ elif choice == "Gestión Reproductiva y Anestro":
         v_id = v_dict[v_sel]
         
         with st.form("form_repro_av"):
-            evento = st.selectbox("Evento
+            evento = st.selectbox("Evento Reproductivo", ["EMPADRE / SERVICIO", "DIAGNOSTICO GESTACION", "PARTO"])
+            f_ev = st.date_input("Fecha del Evento")
+            res = st.selectbox("Resultado", ["PREÑADA", "VACÍA", "PARTO NORMAL", "DISTOCIA (Problema al parto)"])
+            obs = st.text_area("Notas técnicas (ej. protocolo IATF, toro semental asignado)")
+            
+            sub_r = st.form_submit_button("Guardar Registro Reproductivo")
+            if sub_r:
+                db.registrar_reproduccion(v_id, evento, str(f_ev), res, obs)
+                if res == "DISTOCIA":
+                    st.error("🚨 Distocia registrada. Revisar proporción tamaño fetal / pelvis y evaluar historial de la madre y línea del toro.")
+                else:
+                    st.success("Evento registrado correctamente.")
+
+elif choice == "Sanidad Integral Regional":
+    st.header("💉 Calendario Zoosanitario (Zacatecas)")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("Sin animales.")
+    else:
+        d_anim = {f"{r['siniiga']}": r['id'] for _, r in df.iterrows()}
+        sel_an = st.selectbox("Seleccionar Animal o Lote", list(d_anim.keys()))
+        id_a = d_anim[sel_an]
+        
+        with st.form("form_san_z"):
+            trat = st.selectbox("Biológico / Tratamiento", [
+                "VACUNA ANTIRRÁBICA / DERRIENGUE (Endémica en región)",
+                "CLOSTRIDIOSIS (Pierna Negra / Edema Maligno)",
+                "LEPTOSPIROSIS / IBR / BVD (Complejo Reproductivo)",
+                "CONTROL PARASITARIO (Endo y Ectoparásitos)"
+            ])
+            f_ap = st.date_input("Fecha de Aplicación")
+            f_prox = st.date_input("Próxima Dosis / Refuerzo Anual")
+            
+            if st.form_submit_button("Guardar Sanidad"):
+                db.registrar_sanidad(id_a, trat, str(f_ap), str(f_prox))
+                st.success("Sanidad registrada exitosamente.")
+
+elif choice == "Evaluación BIF (205 Días)":
+    st.header("📊 Estandarización Genética y Crecimiento al Destete (BIF)")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("No hay datos suficientes.")
+    else:
+        res_list = []
+        for _, r in df.iterrows():
+            eval_res = db.evaluar_destete_bif(r['id'])
+            if eval_res:
+                res_list.append({
+                    "SINIIGA": r['siniiga'],
+                    "Sexo": r['sexo'],
+                    "Edad Madre (años)": r['edad_madre_anos'],
+                    "Días a Destete": eval_res['dias'],
+                    "GDP (kg/día)": eval_res['gdp'],
+                    "Peso Ajustado 205 Días (kg)": eval_res['peso_205']
+                })
+        if len(res_list) > 0:
+            df_final = pd.DataFrame(res_list)
+            st.metric("Promedio de Peso Ajustado al Destete (Hato)", f"{round(df_final['Peso Ajustado 205 Días (kg)'].mean(), 2)} kg")
+            st.dataframe(df_final, use_container_width=True)
+        else:
+            st.info("Registre pesajes de Nacimiento y Destete en los animales para calcular los ajustes BIF.")
+
+elif choice == "Protocolo de Parto y Alimentación Nocturna":
+    st.header("🌙 Estrategia Fisiológica de Alimentación Nocturna (*Night Feeding*)")
+    st.markdown("""
+    **Fundamento Científico:** Investigaciones en fisiología bovina demuestran que ofrecer la ración completa o el suplemento alimenticio de mayor peso **al atardecer / noche (17:00 a 21:00 hrs)** desplaza los picos de contracción uterina y el inicio del trabajo de parto hacia las **horas diurnas (luz del día)**. 
+    
+    *Beneficios comprobados:*
+    * Reducción drástica de la mortalidad neonatal por atención oportuna de distocias.
+    * Menor estrés para el personal de rancho durante la época de pariciones en el Cañón de T
