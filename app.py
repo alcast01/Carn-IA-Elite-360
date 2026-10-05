@@ -1,24 +1,23 @@
 import streamlit as st
 import sqlite3
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Cr-IA 150 | Sistema de Vaca-Cría Avanzado",
+    page_title="Cr-IA 150 | Sistema de Vaca-Cría de Vanguardia",
     page_icon="🐂",
     layout="wide"
 )
 
-# --- CLASE DE GESTIÓN Y LÓGICA CIENTÍFICA DE DATOS ---
-class CrIA150Avangard:
-    def __init__(self, db_name="cria_150_cientifica.db"):
+# --- CLASE DE GESTIÓN Y LÓGICA DE DATOS ---
+class CrIA150Vanguardia:
+    def __init__(self, db_name="cria_150_vanguardia.db"):
         self.conn = sqlite3.connect(db_name, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self._crear_tablas()
 
     def _crear_tablas(self):
-        # Animales / Vientres, Toros y Crías
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS animales (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -32,7 +31,6 @@ class CrIA150Avangard:
                 circunferencia_escrotal REAL DEFAULT NULL
             )
         ''')
-        # Pesajes y Condición Corporal detallada (Escala 1-9 BIF)
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS pesajes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -44,19 +42,18 @@ class CrIA150Avangard:
                 FOREIGN KEY (animal_id) REFERENCES animales (id)
             )
         ''')
-        # Reproducción y Anestro Postparto
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS reproduccion (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 animal_id INTEGER,
                 tipo_evento TEXT,
                 fecha_evento TEXT,
+                fecha_probable_parto TEXT,
                 resultado TEXT,
                 observaciones TEXT,
                 FOREIGN KEY (animal_id) REFERENCES animales (id)
             )
         ''')
-        # Sanidad Regional (Derriengue, Clostridios, etc.)
         self.cursor.execute('''
             CREATE TABLE IF NOT EXISTS sanidad (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -64,6 +61,16 @@ class CrIA150Avangard:
                 tipo_tratamiento TEXT,
                 fecha_aplicacion TEXT,
                 proxima_dosis TEXT,
+                FOREIGN KEY (animal_id) REFERENCES animales (id)
+            )
+        ''')
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS costos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                animal_id INTEGER,
+                concepto TEXT,
+                monto_mxn REAL,
+                fecha TEXT,
                 FOREIGN KEY (animal_id) REFERENCES animales (id)
             )
         ''')
@@ -76,7 +83,7 @@ class CrIA150Avangard:
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (siniiga, arete, categoria, raza, sexo.upper(), fecha_nac, edad_madre, ce))
             self.conn.commit()
-            return True, "Registro científico guardado con éxito en Cr-IA 150."
+            return True, "Registro guardado con éxito."
         except sqlite3.IntegrityError:
             return False, f"El SINIIGA {siniiga} ya se encuentra registrado."
 
@@ -88,11 +95,18 @@ class CrIA150Avangard:
         self.conn.commit()
 
     def registrar_reproduccion(self, animal_id, tipo_evento, fecha, resultado, obs):
+        f_parto_est = None
+        if tipo_evento == "EMPADRE / SERVICIO":
+            f_dt = datetime.strptime(fecha, "%Y-%m-%d")
+            f_dt_parto = f_dt + timedelta(days=283) # Promedio gestación bovina
+            f_parto_est = f_dt_parto.strftime("%Y-%m-%d")
+
         self.cursor.execute('''
-            INSERT INTO reproduccion (animal_id, tipo_evento, fecha_evento, resultado, observaciones)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (animal_id, tipo_evento, fecha, resultado, obs))
+            INSERT INTO reproduccion (animal_id, tipo_evento, fecha_evento, fecha_probable_parto, resultado, observaciones)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (animal_id, tipo_evento, fecha, f_parto_est, resultado, obs))
         self.conn.commit()
+        return f_parto_est
 
     def registrar_sanidad(self, animal_id, tratamiento, fecha, prox):
         self.cursor.execute('''
@@ -101,8 +115,21 @@ class CrIA150Avangard:
         ''', (animal_id, tratamiento, fecha, prox))
         self.conn.commit()
 
+    def registrar_costo(self, animal_id, concepto, monto, fecha):
+        self.cursor.execute('''
+            INSERT INTO costos (animal_id, concepto, monto_mxn, fecha)
+            VALUES (?, ?, ?, ?)
+        ''', (animal_id, concepto, monto, fecha))
+        self.conn.commit()
+
     def obtener_animales(self):
         return pd.read_sql("SELECT * FROM animales", self.conn)
+
+    def obtener_reproduccion(self):
+        return pd.read_sql("SELECT r.*, a.siniiga FROM reproduccion r JOIN animales a ON r.animal_id = a.id", self.conn)
+
+    def obtener_costos(self):
+        return pd.read_sql("SELECT c.*, a.siniiga FROM costos c JOIN animales a ON c.animal_id = a.id", self.conn)
 
     def evaluar_destete_bif(self, animal_id):
         self.cursor.execute("SELECT sexo, fecha_nacimiento, edad_madre_anos FROM animales WHERE id = ?", (animal_id,))
@@ -147,21 +174,22 @@ class CrIA150Avangard:
             "peso_205": round(peso_ajustado_final, 2)
         }
 
-db = CrIA150Avangard()
+db = CrIA150Vanguardia()
 
 # --- INTERFAZ DE USUARIO ---
-st.title("🐂 Cr-IA 150")
-st.subheader("Plataforma Zootécnica Basada en Evidencia | Cañón de Tlaltenango, Zac.")
+st.title("🐂 Cr-IA 150 - Vanguardia Vaca-Cría")
+st.subheader("Plataforma Inteligente de Producción Cárnica | Cañón de Tlaltenango, Zac.")
 
 menu = [
     "Inventario y Altas", 
     "Control de Condición Corporal (CC 1-9)", 
-    "Gestión Reproductiva y Anestro", 
+    "Calendario Gestación & Partos (*Smart Calendar*)", 
     "Sanidad Integral Regional",
-    "Evaluación BIF (205 Días)",
+    "Evaluación BIF (205 Días) & Gráficas",
+    "Panel Financiero y Costo por Ternero",
     "Protocolo de Parto y Alimentación Nocturna"
 ]
-choice = st.sidebar.selectbox("Módulos Científicos Hato", menu)
+choice = st.sidebar.selectbox("Módulos de Vanguardia", menu)
 
 if choice == "Inventario y Altas":
     st.header("📝 Alta de Reproductor / Vientre / Cría")
@@ -178,7 +206,7 @@ if choice == "Inventario y Altas":
             edad_madre = st.number_input("Edad de la Madre al Parto (Años)", 1.5, 15.0, 4.0, 0.5)
             ce = st.number_input("Circunferencia Escrotal (cm) [Solo si es Toro, min. 32 cm]", 25.0, 50.0, 34.0)
         
-        sub = st.form_submit_button("Registrar en Base Científica")
+        sub = st.form_submit_button("Registrar en Base de Datos")
         if sub:
             if siniiga:
                 exito, msg = db.registrar_animal(siniiga, arete, categoria, raza, sexo, str(fecha_nacimiento), edad_madre, ce if categoria == "TORO REPRODUCTOR" else None)
@@ -189,7 +217,7 @@ if choice == "Inventario y Altas":
 
 elif choice == "Control de Condición Corporal (CC 1-9)":
     st.header("⚖️ Monitoreo de Condición Corporal y Estado Nutricional")
-    st.markdown("La investigación en rumiantes demuestra que la CC al parto es el factor determinante absoluto del intervalo entre partos.")
+    st.markdown("La CC al parto es el factor determinante absoluto del intervalo entre partos en agostadero.")
     
     df = db.obtener_animales()
     if df.empty:
@@ -211,33 +239,43 @@ elif choice == "Control de Condición Corporal (CC 1-9)":
                 if cc < 5:
                     st.warning("⚠️ Alerta Nutricional: CC inferior al óptimo (5-6). Riesgo elevado de anestro prolongado postparto.")
                 else:
-                    st.success("✅ Condición corporal dentro de parámetros óptimos de eficiencia.")
+                    st.success("✅ Condición corporal dentro de parámetros óptimos.")
 
-elif choice == "Gestión Reproductiva y Anestro":
-    st.header("🔄 Seguimiento Reproductivo y Eficiencia del Hato")
+elif choice == "Calendario Gestación & Partos (*Smart Calendar*)":
+    st.header("📅 Calendario Inteligente de Servicios y Partos")
+    st.markdown("Cálculo automático de la fecha probable de parto (gestación bovina promedio de **283 días**) a partir del servicio.")
+    
     df = db.obtener_animales()
     df_v = df[df['categoria'].isin(['VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)'])]
     
     if df_v.empty:
-        st.info("No hay vientres registrados.")
+        st.info("No hay vientres registrados para empadre.")
     else:
         v_dict = {f"{r['siniiga']} ({r['raza']})": r['id'] for _, r in df_v.iterrows()}
         v_sel = st.selectbox("Vientre Seleccionado", list(v_dict.keys()))
         v_id = v_dict[v_sel]
         
-        with st.form("form_repro_av"):
+        with st.form("form_smart_cal"):
             evento = st.selectbox("Evento Reproductivo", ["EMPADRE / SERVICIO", "DIAGNOSTICO GESTACION", "PARTO"])
             f_ev = st.date_input("Fecha del Evento")
-            res = st.selectbox("Resultado", ["PREÑADA", "VACÍA", "PARTO NORMAL", "DISTOCIA (Problema al parto)"])
-            obs = st.text_area("Notas técnicas")
+            res = st.selectbox("Resultado / Estatus", ["PREÑADA", "VACÍA", "PARTO NORMAL", "DISTOCIA"])
+            obs = st.text_area("Notas técnicas (ej. Toro semental, protocolo IATF)")
             
-            sub_r = st.form_submit_button("Guardar Registro Reproductivo")
+            sub_r = st.form_submit_button("Registrar y Calcular Fecha de Parto")
             if sub_r:
-                db.registrar_reproduccion(v_id, evento, str(f_ev), res, obs)
-                if res == "DISTOCIA":
-                    st.error("🚨 Distocia registrada. Revisar proporción tamaño fetal / pelvis y evaluar historial.")
+                f_parto = db.registrar_reproduccion(v_id, evento, str(f_ev), res, obs)
+                if f_parto:
+                    st.success(f"✅ Servicio registrado con éxito. **Fecha Probable de Parto estimada: {f_parto}** (programada a 283 días).")
                 else:
-                    st.success("Evento registrado correctamente.")
+                    st.success("✅ Evento reproductivo guardado correctamente.")
+
+    st.divider()
+    st.subheader("📋 Historial de Gestaciones Activas")
+    df_repro = db.obtener_reproduccion()
+    if not df_repro.empty:
+        st.dataframe(df_repro[['siniiga', 'tipo_evento', 'fecha_evento', 'fecha_probable_parto', 'resultado', 'observaciones']], use_container_width=True)
+    else:
+        st.info("Sin registros reproductivos aún.")
 
 elif choice == "Sanidad Integral Regional":
     st.header("💉 Calendario Zoosanitario (Zacatecas)")
@@ -252,7 +290,7 @@ elif choice == "Sanidad Integral Regional":
         with st.form("form_san_z"):
             trat = st.selectbox("Biológico / Tratamiento", [
                 "VACUNA ANTIRRÁBICA / DERRIENGUE",
-                "CLOSTRIDIOSIS (Pierna Negra / Edema Maligno)",
+                "CLOSTRIDIOSIS (Pierna Negra)",
                 "LEPTOSPIROSIS / IBR / BVD",
                 "CONTROL PARASITARIO"
             ])
@@ -263,8 +301,8 @@ elif choice == "Sanidad Integral Regional":
                 db.registrar_sanidad(id_a, trat, str(f_ap), str(f_prox))
                 st.success("Sanidad registrada exitosamente.")
 
-elif choice == "Evaluación BIF (205 Días)":
-    st.header("📊 Estandarización Genética y Crecimiento al Destete (BIF)")
+elif choice == "Evaluación BIF (205 Días) & Gráficas":
+    st.header("📊 Estandarización BIF y Análisis Gráfico del Hato")
     df = db.obtener_animales()
     if df.empty:
         st.info("No hay datos suficientes.")
@@ -285,24 +323,19 @@ elif choice == "Evaluación BIF (205 Días)":
             df_final = pd.DataFrame(res_list)
             st.metric("Promedio de Peso Ajustado al Destete (Hato)", f"{round(df_final['Peso Ajustado 205 Días (kg)'].mean(), 2)} kg")
             st.dataframe(df_final, use_container_width=True)
+            
+            st.subheader("📈 Gráfica de Distribución de Pesos al Destete (BIF 205)")
+            st.bar_chart(df_final.set_index("SINIIGA")["Peso Ajustado 205 Días (kg)"])
         else:
-            st.info("Registre pesajes de Nacimiento y Destete en los animales para calcular los ajustes BIF.")
+            st.info("Registre pesajes de Nacimiento y Destete en los animales para calcular los ajustes BIF y generar gráficas.")
 
-elif choice == "Protocolo de Parto y Alimentación Nocturna":
-    st.header("🌙 Estrategia Fisiológica de Alimentación Nocturna (Night Feeding)")
-    st.markdown(
-        "**Fundamento Científico:** Investigaciones en fisiología bovina demuestran que ofrecer la ración completa o el suplemento alimenticio "
-        "de mayor peso **al atardecer / noche (17:00 a 21:00 hrs)** desplaza los picos de contracción uterina y el inicio del trabajo de parto "
-        "hacia las **horas diurnas (luz del día)**.\n\n"
-        "*Beneficios comprobados:*\n"
-        "* Reducción drástica de la mortalidad neonatal por atención oportuna de distocias.\n"
-        "* Menor estrés para el personal de rancho durante la época de pariciones en el Cañón de Tlaltenango."
-    )
+elif choice == "Panel Financiero y Costo por Ternero":
+    st.header("💰 Panel Financiero y Costos de Producción por Vientre")
+    st.markdown("Control de gastos en alimentación, sanidad y manejo para calcular el costo real por kilogramo de ternero destetado.")
     
-    with st.form("form_night_feed"):
-        fecha_inicio_par = st.date_input("Fecha Estimada de Inicio de Parición")
-        horas_sumi = st.selectbox("Horario Programado de Suplementación Nocturna", ["17:00 Horas", "18:30 Horas", "20:00 Horas"])
-        obs_nf = st.text_area("Notas sobre ingredientes (ej. rastrojo de maíz tratado + melaza/urea)")
-        
-        if st.form_submit_button("Activar Protocolo de Parto Diurno"):
-            st.success(f"✅ Protocolo configurado con éxito. El suministro nocturno a las {horas_sumi} iniciará la sincronización metabólica.")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("Registre animales primero.")
+    else:
+        d_anim = {f"{r['siniiga']} - {r['categoria']}": r['id'] for _, r in df.iterrows()}
+        id_sel_fin = st.selectbox("Seleccionar Animal / Vaca para Registrar Costo", list(d_anim.keys
