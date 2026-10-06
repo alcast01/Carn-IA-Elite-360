@@ -191,4 +191,25 @@ with st.sidebar.expander("🐂 Parámetros del Hato & Empresa", expanded=True):
     num_vientres = st.number_input("Número de Vientres en el Hato", min_value=1, max_value=5000, value=100, step=10)
     peso_destete_meta = st.slider("Peso Objetivo al Destete (kg)", min_value=180.0, max_value=300.0, value=230.0, step=5.0)
     porcentaje_destete = st.slider("Porcentaje de Destete Esperado (%)", min_value=60.0, max_value=95.0, value=85.0, step=1.0)
-    precio_venta_kg = st.number_input("Precio de Venta
+    precio_venta_kg = st.number_input("Precio de Venta Becerro Destetado (MXN/kg)", min_value=30.0, max_value=100.0, value=65.0, step=1.0)
+    costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre (MXN/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
+
+# --- ENCABEZADO PRINCIPAL ---
+st.markdown("""
+    <div style="background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%); padding: 25px; border-radius: 20px; color: #431407; box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15); margin-bottom: 25px; border: 2px solid #ea580c;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%); color: #ffffff; font-size: 2.2rem; font-weight: bold; padding: 14px 22px; border-radius: 16px; box-shadow: 0 6px 20px rgba(185, 28, 28, 0.3); text-align: center; border: 2px solid #fef08a;">
+                    🐄🐮<br><span style="font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 800;">Vaca & Becerro Hereford</span>
+                </div>
+                <div>
+                    <h1 style="margin: 0; font-size: 2.2rem; font-weight: 900; color: #7c2d12; letter-spacing: -0.5px;">
+                        Cr-IA <span style="color: #ea580c;">150</span> & NutriON <span style="color: #b91c1c;">360 ULTRA</span>
+                    </h1>
+                    <p style="margin: 6px 0 0 0; font-size: 1.05rem; color: #9a3412; font-weight: 600;">
+                        <b>Slogan:</b> "Vaca Hereford y Becerro al Máximo Rendimiento: Genética, Nutrición y Finanzas Hiperrentables."
+                    </p>
+                </div>
+            </div>
+            <div>
+                <span style="background-color: #b91c1c
