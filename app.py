@@ -10,63 +10,45 @@ from datetime import datetime, timedelta
 
 # Configuración de la página
 st.set_page_config(
-    page_title="Cr-IA 150 & NutriON 360 ULTRA | SaaS Ganadero Elite",
-    page_icon="🐂",
+    page_title="Cr-IA 150 & NutriON 360 ULTRA | Hereford Elite SaaS",
+    page_icon="🐄",
     layout="wide"
 )
 
-# --- ESTILOS CSS AVANZADOS & DISEÑO SaaS ---
+# --- ESTILOS CSS AVANZADOS & CLAROS (UI/UX PROFESIONAL) ---
 st.markdown("""
     <style>
     html, body, [class*="css"], .stMarkdown, .stText, .stSelectbox, .stSlider, .stNumberInput, div, span, p, label, .stRadio {
         font-family: 'Calibri', sans-serif !important;
         color: #1e293b !important;
     }
-    .brand-container {
-        background: linear-gradient(135deg, #082214 0%, #113f27 50%, #04120a 100%);
-        padding: 30px;
-        border-radius: 18px;
-        color: white;
-        box-shadow: 0 10px 35px rgba(0,0,0,0.3);
-        margin-bottom: 25px;
-        border: 1px solid rgba(212, 175, 55, 0.4);
+    .main {
+        background-color: #fffaf8;
     }
-    .brand-title {
-        font-size: 2.5rem;
-        font-weight: 900;
-        margin: 0;
-        letter-spacing: -0.5px;
-        color: #ffffff;
+    /* TARJETAS DE MÉTRICAS */
+    .stMetric {
+        background: #ffffff;
+        padding: 12px 14px !important;
+        border-radius: 14px;
+        box-shadow: 0 4px 20px -3px rgba(194, 65, 12, 0.1);
+        border: 1px solid #fed7aa;
+        border-left: 5px solid #ea580c;
+        margin-bottom: 10px !important;
     }
-    .brand-title span {
-        color: #d4af37;
-    }
-    .brand-subtitle {
-        font-size: 1.1rem;
-        color: #d1fae5;
-        margin-top: 6px;
-        font-weight: 500;
-    }
-    .brand-badge {
-        background-color: rgba(212, 175, 55, 0.2);
-        color: #d4af37;
-        padding: 8px 16px;
-        border-radius: 25px;
-        font-size: 0.85rem;
-        font-weight: 700;
-        border: 1px solid #d4af37;
+    .stMetric label {
+        font-size: 0.75rem !important;
+        color: #9a3412 !important;
+        font-weight: 700 !important;
         text-transform: uppercase;
-        letter-spacing: 1.5px;
     }
-    .brand-footer-info {
-        margin-top: 20px;
-        padding-top: 15px;
-        border-top: 1px solid rgba(255, 255, 255, 0.15);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: 15px;
+    .stMetric [data-testid="stMetricValue"] {
+        font-size: 1.2rem !important;
+        color: #431407 !important;
+        font-weight: 800 !important;
+    }
+    h1, h2, h3, h4, h5, h6 {
+        color: #431407 !important;
+        font-weight: 700 !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -257,29 +239,35 @@ with st.sidebar.expander("🐂 Parámetros del Hato & Empresa", expanded=True):
     precio_venta_kg = st.number_input("Precio de Venta Becerro Destetado (MXN/kg)", min_value=30.0, max_value=100.0, value=65.0, step=1.0)
     costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre (MXN/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
 
-# --- LOGOTIPO Y ENCABEZADO SaaS ---
+# --- NUEVO LOGOTIPO Y ENCABEZADO CLARO (VACA HEREFORD CON BECERRO) ---
 st.markdown("""
-    <div class="brand-container">
-        <div class="brand-header" style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+    <div style="background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%); padding: 25px; border-radius: 20px; color: #431407; box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15); margin-bottom: 25px; border: 2px solid #ea580c;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
             <div style="display: flex; align-items: center; gap: 20px;">
-                <div style="background: linear-gradient(135deg, #d4af37 0%, #aa8c2c 100%); color: #04120a; font-size: 2.3rem; font-weight: bold; padding: 12px 20px; border-radius: 14px; box-shadow: 0 6px 20px rgba(0,0,0,0.4); text-align: center; border: 1px solid #fff;">
-                    🐂📈
+                <div style="background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%); color: #ffffff; font-size: 2.2rem; font-weight: bold; padding: 14px 22px; border-radius: 16px; box-shadow: 0 6px 20px rgba(185, 28, 28, 0.3); text-align: center; border: 2px solid #fef08a;">
+                    🐄🐮<br><span style="font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 800;">Vaca & Becerro Hereford</span>
                 </div>
                 <div>
-                    <h1 class="brand-title">Cr-IA <span>150</span> & NutriON <span>360 ULTRA</span></h1>
-                    <p class="brand-subtitle"><b>Slogan:</b> "Tecnolog-IA y Nutrición de Precisión: Eficiencia Zootécnica, Control Financiero y Máximas Ganancias."</p>
+                    <h1 style="margin: 0; font-size: 2.2rem; font-weight: 900; color: #7c2d12; letter-spacing: -0.5px;">
+                        Cr-IA <span style="color: #ea580c;">150</span> & NutriON <span style="color: #b91c1c;">360 ULTRA</span>
+                    </h1>
+                    <p style="margin: 6px 0 0 0; font-size: 1.05rem; color: #9a3412; font-weight: 600;">
+                        <b>Slogan:</b> "Vaca Hereford y Becerro al Máximo Rendimiento: Genética, Nutrición y Finanzas Hiperrentables."
+                    </p>
                 </div>
             </div>
             <div>
-                <span class="brand-badge">Enterprise Elite SaaS V4.0</span>
+                <span style="background-color: #b91c1c; color: #ffffff; padding: 8px 16px; border-radius: 25px; font-size: 0.85rem; font-weight: 700; border: 1px solid #fef08a; text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 4px 10px rgba(185, 28, 28, 0.2);">
+                    Enterprise Elite SaaS V4.0
+                </span>
             </div>
         </div>
-        <div class="brand-footer-info">
-            <p style="margin: 0; font-size: 0.95rem; color: #a8d5ba; font-style: italic;">
-                "Transformando cada kilogramo destetado y cada gramo de nutriente en dividendos reales para tu negocio ganadero."
+        <div style="margin-top: 18px; padding-top: 15px; border-top: 1px solid rgba(194, 65, 12, 0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+            <p style="margin: 0; font-size: 0.95rem; color: #7c2d12; font-style: italic; font-weight: 500;">
+                "Optimizando la relación vaca-becerro con ganancia de peso superior y máxima eficiencia en agostadero."
             </p>
-            <p style="margin: 0; font-size: 0.9rem; color: #ffffff; font-weight: 600;">
-                💻 Aplicación creada y desarrollada por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong> | Cañón de Tlaltenango
+            <p style="margin: 0; font-size: 0.9rem; color: #431407; font-weight: 700;">
+                💻 Creado y desarrollado por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong> | Cañón de Tlaltenango
             </p>
         </div>
     </div>
@@ -354,7 +342,7 @@ def generar_pdf_cria():
 
     pdf.set_font('Arial', 'B', 11)
     pdf.set_text_color(67, 20, 7)
-    pdf.cell(0, 8, safe_str("1. Resumen Zootecnico del Hato"), 0, 1)
+    pdf.cell(0, 8, safe_str("1. Resumen Zootecnico del Hato Hereford"), 0, 1)
     pdf.set_font('Arial', '', 10)
     
     res = {
@@ -408,7 +396,7 @@ with tabs[0]:
             siniiga = st.text_input("SINIIGA Oficial")
             arete = st.text_input("Arete Interno / Ganadería")
             categoria = st.selectbox("Categoría Zootécnica", ["VIENTRE (VACA)", "REEMPLAZO (VAQUILLA)", "CRIA", "TORO REPRODUCTOR"])
-            raza = st.text_input("Composición Racial (ej. Hereford / Simmental)")
+            raza = st.text_input("Composición Racial", value="Hereford / Cruza Hereford")
         with col2:
             sexo = st.selectbox("Sexo", ["MACHO", "HEMBRA"])
             fecha_nacimiento = st.date_input("Fecha de Nacimiento")
@@ -448,7 +436,7 @@ with tabs[1]:
 
 with tabs[2]:
     st.header("🧮 Optimizador Lineal de Raciones (NutriON 360 LP)")
-    st.markdown("Calcula la dieta de mínimo costo mediante programación lineal (`scipy.optimize.linprog`) cumpliendo con requerimientos de proteína y energía.")
+    st.markdown("Calcula la dieta de mínimo costo mediante programación lineal (`scipy.optimize.linprog`) cumpliendo con requerimientos nutricionales para ganado Hereford.")
     
     st.session_state.df_ingredientes_nutrion = st.data_editor(
         st.session_state.df_ingredientes_nutrion,
@@ -500,13 +488,13 @@ with tabs[3]:
     pesos_sim = [180, 200, 220, 240, 260, 280, 300]
     ingresos_sim = [p * becerros_destetados_total * precio_venta_kg for p in pesos_sim]
     fig_fin = px.line(x=pesos_sim, y=ingresos_sim, markers=True, labels={"x": "Peso al Destete (kg)", "y": "Ingreso Bruto Total (MXN)"}, title="Proyección de Ingresos según Peso al Destete")
-    fig_fin.update_traces(line_color="#10b981", line_width=3)
+    fig_fin.update_traces(line_color="#b91c1c", line_width=3)
     st.plotly_chart(fig_fin, use_container_width=True)
 
 with tabs[4]:
     st.header("📅 Calendario Inteligente de Servicios y Partos")
     df = db.obtener_animales()
-    df_v = df[df['categoria'].isin(['VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)'])]
+    df_v = df[df['categoria'].isin(['VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA) '])]
     if df_v.empty:
         st.info("Registre vientres en el inventario.")
     else:
@@ -547,7 +535,7 @@ with tabs[5]:
 
 with tabs[6]:
     st.header("📊 Estandarización BIF (205 Días) & Gráficas")
-    st.markdown("Evaluación genética y de crecimiento estandarizada a 205 días al destete.")
+    st.markdown("Evaluación genética y de crecimiento estandarizada a 205 días al destete para raza Hereford.")
     st.info("💡 Asegúrese de registrar pesajes de Nacimiento y Destete en la base de datos para generar los cálculos BIF automáticos.")
 
 with tabs[7]:
@@ -568,7 +556,7 @@ with tabs[8]:
         with st.chat_message(m["role"]):
             st.markdown(m["content"])
 
-    if q := st.chat_input("Escribe tu duda sobre nutrición, costos o manejo ganadero..."):
+    if q := st.chat_input("Escribe tu duda sobre nutrición, genética Hereford o costos..."):
         st.session_state.nutrion_chat_messages.append({"role": "user", "content": q})
         with st.chat_message("user"):
             st.markdown(q)
@@ -585,7 +573,7 @@ with tabs[8]:
         ran_h = st.text_input("Nombre del Rancho")
         mail_h = st.text_input("Correo o Teléfono")
     with col_c2:
-        mot_h = st.selectbox("Objetivo de Asesoría", ["Optimización de Costos", "Nutrición en Época Seca", "Programa Genético", "Auditoría Financiera"])
+        mot_h = st.selectbox("Objetivo de Asesoría", ["Optimización de Costos", "Nutrición en Época Seca", "Programa Genético Hereford", "Auditoría Financiera"])
         f_cita = st.date_input("Fecha Preferida", min_value=datetime.now().date())
         h_cita = st.selectbox("Horario", ["09:00 AM", "11:00 AM", "01:00 PM", "04:00 PM"])
     if st.button("💳 Pagar $475 MXN y Agendar con el Dr. Alejandro Castañeda", use_container_width=True):
