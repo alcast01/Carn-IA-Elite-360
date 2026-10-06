@@ -8,20 +8,16 @@ import plotly.graph_objects as go
 from fpdf import FPDF
 from datetime import datetime, timedelta
 
-# Configuración de la página
+# Configuración obligatoria de la página (Debe ser la primera instrucción)
 st.set_page_config(
     page_title="Cr-IA 150 & NutriON 360 ULTRA | Hereford Elite SaaS",
     page_icon="🐄",
     layout="wide"
 )
 
-# --- ESTILOS CSS AVANZADOS & CLAROS (UI/UX PROFESIONAL) ---
+# --- ESTILOS CSS SEGUROS (Sin interferir con los componentes de Streamlit) ---
 st.markdown("""
     <style>
-    html, body, [class*="css"], .stMarkdown, .stText, .stSelectbox, .stSlider, .stNumberInput, div, span, p, label, .stRadio {
-        font-family: 'Calibri', sans-serif !important;
-        color: #1e293b !important;
-    }
     .main {
         background-color: #fffaf8;
     }
@@ -52,74 +48,74 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# --- CLASE DE BASE DE DATOS SEGURA ---
+# --- CLASE DE BASE DE DATOS ROBUSTA ---
 class CrIA150NutriON:
     def __init__(self, db_name="cria_nutrion_elite.db"):
-        self.conn = sqlite3.connect(db_name, check_same_thread=False)
-        self.cursor = self.conn.cursor()
-        self._crear_tablas()
+        try:
+            self.conn = sqlite3.connect(db_name, check_same_thread=False)
+            self.cursor = self.conn.cursor()
+            self._crear_tablas()
+        except Exception as e:
+            st.error(f"Error conectando a la base de datos: {e}")
 
     def _crear_tablas(self):
-        try:
-            self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS animales (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    siniiga TEXT UNIQUE,
-                    arete_propio TEXT,
-                    categoria TEXT,
-                    raza TEXT,
-                    sexo TEXT,
-                    fecha_nacimiento TEXT,
-                    edad_madre_anos REAL,
-                    circunferencia_escrotal REAL DEFAULT NULL
-                )
-            ''')
-            self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS pesajes (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    animal_id INTEGER,
-                    tipo_pesaje TEXT,
-                    fecha_pesaje TEXT,
-                    peso_kg REAL,
-                    condicion_corporal INTEGER,
-                    FOREIGN KEY (animal_id) REFERENCES animales (id)
-                )
-            ''')
-            self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS reproduccion (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    animal_id INTEGER,
-                    tipo_evento TEXT,
-                    fecha_evento TEXT,
-                    fecha_probable_parto TEXT,
-                    resultado TEXT,
-                    observaciones TEXT,
-                    FOREIGN KEY (animal_id) REFERENCES animales (id)
-                )
-            ''')
-            self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS sanidad (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    animal_id INTEGER,
-                    tipo_tratamiento TEXT,
-                    fecha_aplicacion TEXT,
-                    proxima_dosis TEXT,
-                    FOREIGN KEY (animal_id) REFERENCES animales (id)
-                )
-            ''')
-            self.cursor.execute('''
-                CREATE TABLE IF NOT EXISTS costos (
-                    id INTEGER PRIMARY KEY AUTOINCREMENT,
-                    animal_id INTEGER,
-                    concepto TEXT,
-                    monto_mxn REAL,
-                    fecha TEXT,
-                    FOREIGN KEY (animal_id) REFERENCES animales (id)
-                )
-            ''')
-            self.conn.commit()
-        except Exception as e:
-            st.error(f"Error al inicializar base de datos: {e}")
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS animales (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                siniiga TEXT UNIQUE,
+                arete_propio TEXT,
+                categoria TEXT,
+                raza TEXT,
+                sexo TEXT,
+                fecha_nacimiento TEXT,
+                edad_madre_anos REAL,
+                circunferencia_escrotal REAL DEFAULT NULL
+            )
+        ''')
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS pesajes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                animal_id INTEGER,
+                tipo_pesaje TEXT,
+                fecha_pesaje TEXT,
+                peso_kg REAL,
+                condicion_corporal INTEGER,
+                FOREIGN KEY (animal_id) REFERENCES animales (id)
+            )
+        ''')
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS reproduccion (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                animal_id INTEGER,
+                tipo_evento TEXT,
+                fecha_evento TEXT,
+                fecha_probable_parto TEXT,
+                resultado TEXT,
+                observaciones TEXT,
+                FOREIGN KEY (animal_id) REFERENCES animales (id)
+            )
+        ''')
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS sanidad (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                animal_id INTEGER,
+                tipo_tratamiento TEXT,
+                fecha_aplicacion TEXT,
+                proxima_dosis TEXT,
+                FOREIGN KEY (animal_id) REFERENCES animales (id)
+            )
+        ''')
+        self.cursor.execute('''
+            CREATE TABLE IF NOT EXISTS costos (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                animal_id INTEGER,
+                concepto TEXT,
+                monto_mxn REAL,
+                fecha TEXT,
+                FOREIGN KEY (animal_id) REFERENCES animales (id)
+            )
+        ''')
+        self.conn.commit()
 
     def registrar_animal(self, siniiga, arete, categoria, raza, sexo, fecha_nac, edad_madre, ce):
         try:
@@ -160,21 +156,8 @@ class CrIA150NutriON:
         ''', (animal_id, tratamiento, fecha, prox))
         self.conn.commit()
 
-    def registrar_costo(self, animal_id, concepto, monto, fecha):
-        self.cursor.execute('''
-            INSERT INTO costos (animal_id, concepto, monto_mxn, fecha)
-            VALUES (?, ?, ?, ?)
-        ''', (animal_id, concepto, monto, fecha))
-        self.conn.commit()
-
     def obtener_animales(self):
         return pd.read_sql("SELECT * FROM animales", self.conn)
-
-    def obtener_reproduccion(self):
-        return pd.read_sql("SELECT r.*, a.siniiga FROM reproduccion r JOIN animales a ON r.animal_id = a.id", self.conn)
-
-    def obtener_costos(self):
-        return pd.read_sql("SELECT c.*, a.siniiga FROM costos c JOIN animales a ON c.animal_id = a.id", self.conn)
 
 db = CrIA150NutriON()
 
@@ -202,7 +185,18 @@ if "nutrion_chat_messages" not in st.session_state:
     ]
 
 # --- BARRA LATERAL ---
-st.sidebar.success("🟢 Acceso Directo Propietario")
+st.sidebar.success("🟢 Sistema Activo")
 st.sidebar.markdown("---")
 with st.sidebar.expander("🐂 Parámetros del Hato & Empresa", expanded=True):
-    num_vientres = st
+    num_vientres = st.number_input("Número de Vientres en el Hato", min_value=1, max_value=5000, value=100, step=10)
+    peso_destete_meta = st.slider("Peso Objetivo al Destete (kg)", min_value=180.0, max_value=300.0, value=230.0, step=5.0)
+    porcentaje_destete = st.slider("Porcentaje de Destete Esperado (%)", min_value=60.0, max_value=95.0, value=85.0, step=1.0)
+    precio_venta_kg = st.number_input("Precio de Venta Becerro Destetado (MXN/kg)", min_value=30.0, max_value=100.0, value=65.0, step=1.0)
+    costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre (MXN/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
+
+# --- ENCABEZADO PRINCIPAL ---
+st.markdown("""
+    <div style="background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%); padding: 25px; border-radius: 20px; color: #431407; box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15); margin-bottom: 25px; border: 2px solid #ea580c;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%); color: #ffffff; font-size: 2.2rem; font-weight: bold; padding: 14
