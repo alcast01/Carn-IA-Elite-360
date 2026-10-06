@@ -8,14 +8,14 @@ import plotly.graph_objects as go
 from fpdf import FPDF
 from datetime import datetime, timedelta
 
-# Configuración obligatoria de la página (Debe ser la primera instrucción)
+# Configuración obligatoria de la página
 st.set_page_config(
     page_title="Cr-IA 150 & NutriON 360 ULTRA | Hereford Elite SaaS",
     page_icon="🐄",
     layout="wide"
 )
 
-# --- ESTILOS CSS SEGUROS (Sin interferir con los componentes de Streamlit) ---
+# --- ESTILOS CSS SEGUROS ---
 st.markdown("""
     <style>
     .main {
@@ -191,12 +191,4 @@ with st.sidebar.expander("🐂 Parámetros del Hato & Empresa", expanded=True):
     num_vientres = st.number_input("Número de Vientres en el Hato", min_value=1, max_value=5000, value=100, step=10)
     peso_destete_meta = st.slider("Peso Objetivo al Destete (kg)", min_value=180.0, max_value=300.0, value=230.0, step=5.0)
     porcentaje_destete = st.slider("Porcentaje de Destete Esperado (%)", min_value=60.0, max_value=95.0, value=85.0, step=1.0)
-    precio_venta_kg = st.number_input("Precio de Venta Becerro Destetado (MXN/kg)", min_value=30.0, max_value=100.0, value=65.0, step=1.0)
-    costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre (MXN/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
-
-# --- ENCABEZADO PRINCIPAL ---
-st.markdown("""
-    <div style="background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%); padding: 25px; border-radius: 20px; color: #431407; box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15); margin-bottom: 25px; border: 2px solid #ea580c;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <div style="background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%); color: #ffffff; font-size: 2.2rem; font-weight: bold; padding: 14
+    precio_venta_kg = st.number_input("Precio de Venta
