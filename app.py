@@ -201,17 +201,6 @@ class CrIA150NutriON:
 
 db = CrIA150NutriON()
 
-# --- INICIALIZACIÓN DE INGREDIENTES PARA OPTIMIZACIÓN LINEAL (NUTTION 360) ---
+# --- INICIALIZACIÓN DE INGREDIENTES PARA OPTIMIZACIÓN LINEAL ---
 if "df_ingredientes_nutrion" not in st.session_state:
-    st.session_state.df_ingredientes_nutrion = pd.DataFrame({
-        "Nombre del Ingrediente": [
-            "Ensilado de maiz", "Heno de zacate Buffel / Pasto nativo", "Harina de soya", 
-            "Grano de maiz molido", "Pasta de canola", "Melaza de caña", 
-            "Sal mineralizada 12% P", "Urea ganadera", "Núcleo Becerro Engorda", "Grasa sobrepaso"
-        ],
-        "Categoria": ["Forraje Húmedo", "Forraje Seco", "Suplemento Proteico", "Grano Energético", "Suplemento Proteico", "Subproducto Energético", "Suplemento Mineral", "Fuente No Proteica", "Suplemento Mineral", "Suplemento Energético"],
-        "Disponible": [True, True, True, True, True, True, True, True, True, True],
-        "Precio Estimado (MXN/ton)": [1100.0, 3200.0, 12500.0, 5800.0, 8500.0, 4800.0, 11000.0, 14000.0, 24000.0, 34000.0],
-        "Proteina Cruda (PC % MS)": [8.0, 8.5, 48.0, 8.5, 38.0, 4.8, 0.0, 281.0, 0.0, 1.0],
-        "Energia Neta Ganancia (ENg Mcal/kg)": [0.95, 0.82, 1.45, 1.52, 1.38, 1.30, 0.0, 0.0, 0.0, 2.10],
-        "FND (% MS)":
+    st.session_state
