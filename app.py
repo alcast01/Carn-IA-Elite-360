@@ -16,37 +16,33 @@ st.set_page_config(
 )
 
 # --- ESTILOS CSS SEGUROS ---
-st.markdown("""
-    <style>
-    .main {
-        background-color: #fffaf8;
-    }
-    .stMetric {
-        background: #ffffff;
-        padding: 12px 14px !important;
-        border-radius: 14px;
-        box-shadow: 0 4px 20px -3px rgba(194, 65, 12, 0.1);
-        border: 1px solid #fed7aa;
-        border-left: 5px solid #ea580c;
-        margin-bottom: 10px !important;
-    }
-    .stMetric label {
-        font-size: 0.75rem !important;
-        color: #9a3412 !important;
-        font-weight: 700 !important;
-        text-transform: uppercase;
-    }
-    .stMetric [data-testid="stMetricValue"] {
-        font-size: 1.2rem !important;
-        color: #431407 !important;
-        font-weight: 800 !important;
-    }
-    h1, h2, h3, h4, h5, h6 {
-        color: #431407 !important;
-        font-weight: 700 !important;
-    }
-    </style>
-""", unsafe_allow_html=True)
+st.markdown("""<style>
+.main { background-color: #fffaf8; }
+.stMetric {
+    background: #ffffff;
+    padding: 12px 14px !important;
+    border-radius: 14px;
+    box-shadow: 0 4px 20px -3px rgba(194, 65, 12, 0.1);
+    border: 1px solid #fed7aa;
+    border-left: 5px solid #ea580c;
+    margin-bottom: 10px !important;
+}
+.stMetric label {
+    font-size: 0.75rem !important;
+    color: #9a3412 !important;
+    font-weight: 700 !important;
+    text-transform: uppercase;
+}
+.stMetric [data-testid="stMetricValue"] {
+    font-size: 1.2rem !important;
+    color: #431407 !important;
+    font-weight: 800 !important;
+}
+h1, h2, h3, h4, h5, h6 {
+    color: #431407 !important;
+    font-weight: 700 !important;
+}
+</style>""", unsafe_allow_html=True)
 
 # --- CLASE DE BASE DE DATOS ROBUSTA ---
 class CrIA150NutriON:
@@ -195,21 +191,4 @@ with st.sidebar.expander("🐂 Parámetros del Hato & Empresa", expanded=True):
     costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre (MXN/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
 
 # --- ENCABEZADO PRINCIPAL ---
-st.markdown("""
-    <div style="background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%); padding: 25px; border-radius: 20px; color: #431407; box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15); margin-bottom: 25px; border: 2px solid #ea580c;">
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;">
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <div style="background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%); color: #ffffff; font-size: 2.2rem; font-weight: bold; padding: 14px 22px; border-radius: 16px; box-shadow: 0 6px 20px rgba(185, 28, 28, 0.3); text-align: center; border: 2px solid #fef08a;">
-                    🐄🐮<br><span style="font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 800;">Vaca & Becerro Hereford</span>
-                </div>
-                <div>
-                    <h1 style="margin: 0; font-size: 2.2rem; font-weight: 900; color: #7c2d12; letter-spacing: -0.5px;">
-                        Cr-IA <span style="color: #ea580c;">150</span> & NutriON <span style="color: #b91c1c;">360 ULTRA</span>
-                    </h1>
-                    <p style="margin: 6px 0 0 0; font-size: 1.05rem; color: #9a3412; font-weight: 600;">
-                        <b>Slogan:</b> "Vaca Hereford y Becerro al Máximo Rendimiento: Genética, Nutrición y Finanzas Hiperrentables."
-                    </p>
-                </div>
-            </div>
-            <div>
-                <span style="background-color: #b91c1c
+st.markdown("""<div style="background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%); padding: 25px; border-radius: 20px; color: #431407; box-shadow: 0 10px 30px rgba(194,
