@@ -245,4 +245,91 @@ class PDFCrIAReport(FPDF):
         self.set_y(-15)
         self.set_font('Arial', 'I', 8)
         self.set_text_color(100, 100, 100)
-        self.cell(0, 10, f"Pagina {self.page_no()} | Canon de Tlaltenango, Zacatecas", 0, 0
+        self.cell(0, 10, f"Pagina {self.page_no()} | Canon de Tlaltenango, Zacatecas", 0, 0, "C")
+
+def generar_pdf_cria():
+    pdf = PDFCrIAReport()
+    pdf.add_page()
+    def safe_str(txt):
+        return str(txt).encode('latin-1', 'replace').decode('latin-1')
+
+    pdf.set_font('Arial', 'B', 11)
+    pdf.set_text_color(67, 20, 7)
+    pdf.cell(0, 8, safe_str("1. Resumen Zootecnico del Hato Hereford"), 0, 1)
+    pdf.set_font('Arial', '', 10)
+    
+    res = {
+        "Vientres en Reproduccion": f"{num_vientres} cabezas",
+        "Porcentaje de Destete": f"{porcentaje_destete}%",
+        "Becerros Destetados Anuales": f"{becerros_destetados_total} cabezas",
+        "Peso Promedio Destete": f"{peso_destete_meta} kg",
+        "Costo Dieta Optimizada (LP)": f"${costo_ton_dieta:,.2f} MXN/ton"
+    }
+    for k, v in res.items():
+        pdf.cell(95, 7, safe_str(f"{k}:"), 0, 0)
+        pdf.cell(95, 7, safe_str(f"{v}"), 0, 1)
+
+    pdf.ln(4)
+    pdf.set_font('Arial', 'B', 11)
+    pdf.cell(0, 8, safe_str("2. Evaluacion Financiera y Ganancias"), 0, 1)
+    pdf.set_font('Arial', '', 10)
+    
+    econ = {
+        "Ingreso Total por Venta de Becerros": f"${ingreso_total_venta:,.2f} MXN",
+        "Costo Operativo Total del Hato": f"${costos_totales_hato:,.2f} MXN",
+        "Utilidad Neta Empresarial": f"${utilidad_neta_empresarial:,.2f} MXN",
+        "Rentabilidad sobre Inversion": f"{rentabilidad_sobre_costo:.1f}%"
+    }
+    for k, v in econ.items():
+        pdf.cell(95, 7, safe_str(f"{k}:"), 0, 0)
+        pdf.cell(95, 7, safe_str(f"{v}"), 0, 1)
+
+    output = pdf.output()
+    return bytes(output) if isinstance(output, (bytes, bytearray)) else output.encode('latin1')
+
+# --- MENÚ DE MÓDULOS (11 TABS) ---
+tabs = st.tabs([
+    "📋 1. Inventario & Altas",
+    "⚖️ 2. Condición Corporal",
+    "🧮 3. Optimizador LP",
+    "📊 4. Finanzas & Ganancias",
+    "📅 5. Smart Calendar (Partos)",
+    "💉 6. Sanidad Regional",
+    "📊 7. Evaluación BIF",
+    "📄 8. Reporte Ejecutivo PDF",
+    "💬 9. Asistente IA & Citas",
+    "🌾 10. Contingencia & Manejo",
+    "📈 11. Proyección & Engorda (Futuro)"
+])
+
+with tabs[0]:
+    st.header("📝 Alta de Reproductor / Vientre / Cría")
+    with st.form("form_alta_avanzada"):
+        col1, col2 = st.columns(2)
+        with col1:
+            siniiga = st.text_input("SINIIGA Oficial")
+            arete = st.text_input("Arete Interno / Ganadería")
+            categoria = st.selectbox("Categoría Zootécnica", ["VIENTRE (VACA)", "REEMPLAZO (VAQUILLA)", "CRIA", "TORO REPRODUCTOR"])
+            raza = st.text_input("Composición Racial", value="Hereford / Cruza Hereford")
+        with col2:
+            sexo = st.selectbox("Sexo", ["MACHO", "HEMBRA"])
+            fecha_nacimiento = st.date_input("Fecha de Nacimiento")
+            edad_madre = st.number_input("Edad de la Madre al Parto (Años)", 1.5, 15.0, 4.0, 0.5)
+            ce = st.number_input("Circunferencia Escrotal (cm) [Solo si es Toro, min. 32 cm]", 25.0, 50.0, 34.0)
+        
+        sub = st.form_submit_button("Registrar en Base de Datos")
+        if sub:
+            if siniiga:
+                exito, msg = db.registrar_animal(siniiga, arete, categoria, raza, sexo, str(fecha_nacimiento), edad_madre, ce if categoria == "TORO REPRODUCTOR" else None)
+                if exito:
+                    st.success(msg)
+                else:
+                    st.warning(msg)
+            else:
+                st.error("El SINIIGA es obligatorio.")
+
+with tabs[1]:
+    st.header("⚖️ Monitoreo de Condición Corporal y Estado Nutricional")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("Registre animales en el inventario (Pestaña 1).")
