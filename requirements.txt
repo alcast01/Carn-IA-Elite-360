@@ -1,3 +1,6 @@
 streamlit
 pandas
-pyotp
+numpy
+scipy
+plotly
+fpdf
