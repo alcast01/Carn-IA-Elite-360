@@ -115,14 +115,22 @@ class CrIA150Database:
 
     def registrar_animal(self, siniiga, arete, categoria, raza, sexo, fecha_nac, edad_madre, ce):
         try:
+            # Si el SINIIGA está vacío, generamos uno interno único basado en arete o timestamp
+            if not siniiga or siniiga.strip() == "":
+                siniiga = f"SIN-SINIIGA-{arete if arete and arete.strip() != '' else datetime.now().strftime('%m%d%H%M%S')}"
+            
+            arete_val = arete.strip() if arete else "S/A"
+
             self.cursor.execute('''
                 INSERT INTO animales (siniiga, arete_propio, categoria, raza, sexo, fecha_nacimiento, edad_madre_anos, circunferencia_escrotal)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (siniiga, arete, categoria, raza, sexo.upper(), fecha_nac, edad_madre, ce))
+            ''', (siniiga.strip(), arete_val, categoria, raza, sexo.upper(), fecha_nac, edad_madre, ce))
             self.conn.commit()
-            return True, "Registro guardado con éxito."
+            return True, f"¡Registro guardado con éxito en la base de datos! (Identificador: {siniiga.strip()})"
         except sqlite3.IntegrityError:
-            return False, f"El SINIIGA {siniiga} ya se encuentra registrado."
+            return False, f"El SINIIGA o Identificador '{siniiga}' ya se encuentra registrado en la base de datos."
+        except Exception as e:
+            return False, f"Error al guardar en base de datos: {e}"
 
     def registrar_pesaje(self, animal_id, tipo, fecha, peso, cc):
         self.cursor.execute('''
@@ -194,7 +202,7 @@ with st.sidebar.expander("🐂 Parámetros del Hato & Empresa", expanded=True):
     precio_venta_kg = st.number_input("Precio de Venta Becerro Destetado (MXN/kg)", min_value=30.0, max_value=100.0, value=65.0, step=1.0)
     costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre (MXN/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
 
-# --- ENCABEZADO PRINCIPAL (SIN SLOGAN) ---
+# --- ENCABEZADO PRINCIPAL ---
 st.markdown('<div style="background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%); padding: 25px; border-radius: 20px; color: #431407; box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15); margin-bottom: 25px; border: 2px solid #ea580c;"><div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;"><div style="display: flex; align-items: center; gap: 20px;"><div style="background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%); color: #ffffff; font-size: 2.2rem; font-weight: bold; padding: 14px 22px; border-radius: 16px; box-shadow: 0 6px 20px rgba(185, 28, 28, 0.3); text-align: center; border: 2px solid #fef08a;">🐄🐮<br><span style="font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 800;">Vaca & Becerro Hereford</span></div><div><h1 style="margin: 0; font-size: 2.2rem; font-weight: 900; color: #7c2d12; letter-spacing: -0.5px;">Cr-IA <span style="color: #ea580c;">150</span></h1></div></div><div><span style="background-color: #b91c1c; color: #ffffff; padding: 8px 16px; border-radius: 25px; font-size: 0.85rem; font-weight: 700; border: 1px solid #fef08a; text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 4px 10px rgba(185, 28, 28, 0.2);">Enterprise Elite SaaS V4.1</span></div></div><div style="margin-top: 18px; padding-top: 15px; border-top: 1px solid rgba(194, 65, 12, 0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;"><p style="margin: 0; font-size: 0.95rem; color: #7c2d12; font-style: italic; font-weight: 500;">"Optimizando la relación vaca-becerro con ganancia de peso superior y máxima eficiencia en agostadero."</p><p style="margin: 0; font-size: 0.9rem; color: #431407; font-weight: 700;">💻 Creado y desarrollado por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong> | Cañón de Tlaltenango</p></div></div>', unsafe_allow_html=True)
 
 # --- OPTIMIZACIÓN LINEAL ---
@@ -303,30 +311,46 @@ tabs = st.tabs([
 ])
 
 with tabs[0]:
-    st.header("📝 Alta de Reproductor / Vientre / Cría")
-    with st.form("form_alta_avanzada"):
+    st.header("📝 Alta de Reproductor / Vientre / Cría (Base de Datos)")
+    st.markdown("Registra y almacena permanentemente las vacas reproductoras, vaquillas de remplazo, crías y sementales en la base de datos SQLite.")
+    
+    with st.form("form_alta_avanzada", clear_on_submit=True):
         col1, col2 = st.columns(2)
         with col1:
-            siniiga = st.text_input("SINIIGA Oficial")
-            arete = st.text_input("Arete Interno / Ganadería")
+            siniiga = st.text_input("SINIIGA Oficial (Opcional - Si se deja vacío se genera folio automático)")
+            arete = st.text_input("Arete Interno / Ganadería *")
             categoria = st.selectbox("Categoría Zootécnica", ["VIENTRE (VACA)", "REEMPLAZO (VAQUILLA)", "CRIA", "TORO REPRODUCTOR"])
             raza = st.text_input("Composición Racial", value="Hereford / Cruza Hereford")
         with col2:
-            sexo = st.selectbox("Sexo", ["MACHO", "HEMBRA"])
+            sexo = st.selectbox("Sexo", ["HEMBRA", "MACHO"])
             fecha_nacimiento = st.date_input("Fecha de Nacimiento")
             edad_madre = st.number_input("Edad de la Madre al Parto (Años)", 1.5, 15.0, 4.0, 0.5)
             ce = st.number_input("Circunferencia Escrotal (cm) [Solo si es Toro, min. 32 cm]", 25.0, 50.0, 34.0)
         
-        sub = st.form_submit_button("Registrar en Base de Datos")
+        sub = st.form_submit_button("💾 Guardar Animal en Base de Datos")
         if sub:
-            if siniiga:
+            if not arete and not siniiga:
+                st.error("Debe ingresar al menos el Arete Interno o el SINIIGA.")
+            else:
                 exito, msg = db.registrar_animal(siniiga, arete, categoria, raza, sexo, str(fecha_nacimiento), edad_madre, ce if categoria == "TORO REPRODUCTOR" else None)
                 if exito:
                     st.success(msg)
                 else:
                     st.warning(msg)
-            else:
-                st.error("El SINIIGA es obligatorio.")
+
+    st.markdown("---")
+    st.subheader("📋 Inventario Actual en la Base de Datos")
+    df_anim = db.obtener_animales()
+    if df_anim.empty:
+        st.info("No hay animales registrados en la base de datos actualmente.")
+    else:
+        filtro_cat = st.selectbox("Filtrar por Categoría Zootécnica", ["TODAS"] + list(df_anim['categoria'].unique()))
+        if filtro_cat != "TODAS":
+            df_show = df_anim[df_anim['categoria'] == filtro_cat]
+        else:
+            df_show = df_anim
+        st.dataframe(df_show, use_container_width=True, hide_index=True)
+        st.metric("Total de Animales en Base de Datos", len(df_anim))
 
 with tabs[1]:
     st.header("⚖️ Monitoreo de Condición Corporal y Estado Nutricional")
