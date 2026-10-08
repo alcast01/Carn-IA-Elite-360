@@ -340,19 +340,20 @@ def generar_pdf_cria():
         return output.encode('latin1')
     return bytes(output)
 
-# --- MENÚ DE MÓDULOS (11 TABS) ---
+# --- MENÚ DE MÓDULOS (12 TABS) ---
 tabs = st.tabs([
     "📋 1. Inventario & Altas",
     "⚖️ 2. Condición Corporal",
     "🧮 3. Optimizador LP",
-    "📊 4. Finanzas & Ganancias",
-    "📅 5. Smart Calendar (Partos)",
-    "💉 6. Sanidad Regional",
-    "📊 7. Evaluación BIF",
-    "📄 8. Reporte Ejecutivo PDF",
-    "💬 9. Asistente IA & Citas",
-    "🌾 10. Contingencia & Manejo",
-    "📈 11. Proyección & Engorda (Futuro)"
+    "🐄 4. Suplementación Vacas",
+    "📈 5. Predicción Becerros Engorda",
+    "📊 6. Finanzas & Ganancias",
+    "📅 7. Smart Calendar (Partos)",
+    "💉 8. Sanidad Regional",
+    "📊 9. Evaluación BIF",
+    "📄 10. Reporte Ejecutivo PDF",
+    "💬 11. Asistente IA & Citas",
+    "🌾 12. Contingencia & Manejo"
 ])
 
 with tabs[0]:
@@ -419,8 +420,8 @@ with tabs[1]:
                 st.success("✅ Condición corporal y peso registrados correctamente.")
 
 with tabs[2]:
-    st.header("🧮 Optimizador Lineal de Raciones")
-    st.markdown("Calcula la dieta de mínimo costo mediante programación lineal (`scipy.optimize.linprog`) cumpliendo con requerimientos nutricionales para ganado Hereford.")
+    st.header("🧮 Optimizador Lineal de Raciones (Selección Instantánea)")
+    st.markdown("Selecciona con un solo clic los ingredientes disponibles y calcula la dieta de mínimo costo mediante programación lineal (`scipy.optimize.linprog`).")
     
     st.session_state.df_ingredientes = st.data_editor(
         st.session_state.df_ingredientes,
@@ -442,20 +443,162 @@ with tabs[2]:
             frac = resultado_nut.x[i]
             porc = frac * 100
             kg_ton = frac * 1000
-            if porc > 0.01:
-                costo_parcial = frac * c_n[i]
-                tabla_dieta.append({
-                    "Ingrediente": ing,
-                    "Inclusión (%)": round(porc, 1),
-                    "Kg por Tonelada": round(kg_ton, 1),
-                    "Costo Unitario ($/ton)": f"${c_n[i]:,.2f}",
-                    "Aporte al Costo ($)": f"${costo_parcial:,.2f}"
-                })
+            costo_parcial = frac * c_n[i]
+            # Mostrar todos los ingredientes activos en la solución o con inclusión > 0
+            tabla_dieta.append({
+                "Ingrediente": ing,
+                "Estado Disponible": "Sí" if df_nut_base.loc[i, "Disponible"] else "No",
+                "Inclusión (%)": round(porc, 2),
+                "Kg por Tonelada": round(kg_ton, 1),
+                "Costo Unitario ($/ton)": f"${c_n[i]:,.2f}",
+                "Aporte al Costo ($)": f"${costo_parcial:,.2f}"
+            })
         st.dataframe(pd.DataFrame(tabla_dieta), use_container_width=True, hide_index=True)
     else:
-        st.info("ℹ️ **Nota del Optimizador:** Ajusta la disponibilidad de ingredientes y rangos de inclusión en la tabla superior para encontrar una solución matemática factible.")
+        st.info("ℹ️ **Nota del Optimizador:** Ajusta los ingredientes disponibles en la tabla superior (asegúrate de tener al menos un forraje y un suplemento con 'Disponible' activado) para encontrar la solución matemática factible.")
 
 with tabs[3]:
+    st.header("🐄 Suplementación Específica para Vacas de Reproducción")
+    st.markdown("Módulo zootécnico enfocado en calcular los requerimientos y aportes nutricionales para vientres Hereford en agostadero durante gestación y lactancia.")
+    
+    col_v1, col_v2, col_v3 = st.columns(3)
+    with col_v1:
+        peso_vaca = st.number_input("Peso Vivo Promedio Vaca (kg)", 350.0, 700.0, 480.0, 10.0)
+        estado_fisiologico = st.selectbox("Estado Fisiológico", ["Gestación (Último TerCIO)", "Lactación Temprana (0-90 días)", "Vacía / Recuperación Corporal"])
+    with col_v2:
+        calidad_forraje_agostadero = st.selectbox("Calidad del Forraje en Agostadero", ["Mala / Seco (< 6% PC)", "Media / Regular (6-9% PC)", "Buena / Verde (> 10% PC)"])
+        consumo_ms_vaca_pct = st.slider("Consumo Esperado MS (% PV)", 1.8, 2.8, 2.2, 0.1)
+    with col_v3:
+        crida_al_pie = st.checkbox("¿Tiene cría al pie?", value=True)
+        leche_proyectada_kg = st.slider("Producción Estimada de Leche (kg/día)", 2.0, 10.0, 5.0, 0.5) if crida_al_pie else 0.0
+
+    consumo_ms_vaca_kg = peso_vaca * (consumo_ms_vaca_pct / 100.0)
+    
+    # Requerimientos nutricionales según estado
+    if "Gestación" in estado_fisiologico:
+        req_pc_pct = 9.5
+        req_em_mcal = 2.15
+    elif "Lactación" in estado_fisiologico:
+        req_pc_pct = 11.5
+        req_em_mcal = 2.45
+    else:
+        req_pc_pct = 8.0
+        req_em_mcal = 1.95
+
+    if calidad_forraje_agostadero.startswith("Mala"):
+        aporte_pc_forraje = 5.5
+    elif calidad_forraje_agostadero.startswith("Media"):
+        aporte_pc_forraje = 7.5
+    else:
+        aporte_pc_forraje = 10.5
+
+    deficit_pc = req_pc_pct - aporte_pc_forraje
+
+    st.markdown("---")
+    st.subheader("📊 Diagnóstico Nutricional del Vientre")
+    
+    col_r1, col_r2, col_r3 = st.columns(3)
+    with col_r1:
+        st.metric("Consumo Diario MS", f"{consumo_ms_vaca_kg:.2f} kg/día")
+        st.metric("Proteína Requerida", f"{req_pc_pct:.1f}% PC")
+    with col_r2:
+        st.metric("Proteína del Agostadero", f"{aporte_pc_forraje:.1f}% PC")
+        if deficit_pc > 0:
+            st.metric("Déficit Proteico", f"{deficit_pc:.1f}% (Requiere Suplemento)", delta_color="inverse")
+        else:
+            st.metric("Déficit Proteico", "Sin déficit (Cobertura total)")
+    with col_r3:
+        st.metric("Costo Anual Vaca Madre", f"${costo_operativo_vaca_ano:,.2f} MXN")
+        st.metric("Costo Diario Estimado", f"${costo_operativo_vaca_ano/365:,.2f} MXN/día")
+
+    st.markdown("""
+        ### 💡 Recomendación de Suplementación para el Hato de Vientres:
+        * **Si hay déficit proteico:** Suministrar bloques multinutricionales o suplemento proteico al 35-40% de PC (a base de pasta de soya / canola) a razón de 1.0 a 1.5 kg/cabeza/día para estimular la rumina y mejorar la digestibilidad de la fibra baja en calidad.
+        * **Época de Estiaje:** Mantener libre acceso a sal mineralizada (12% P) y asegurar agua limpia para maximizar los porcentajes de destete superiores al 85%.
+    """)
+
+with tabs[4]:
+    st.header("📈 Predicción de Becerros de Engorda (Destete vs. Engorda)")
+    st.markdown("Modelo financiero basado en los precios actuales del mercado ganadero: **$84.00 MXN/kg al destete** y **$60.00 MXN/kg en ganado gordo (finalización)**.")
+
+    col_p1, col_p2, col_p3 = st.columns(3)
+    with col_p1:
+        peso_entrada_eng = st.number_input("Peso Inicial al Destete (kg)", 150.0, 350.0, float(peso_destete_meta), 5.0)
+        peso_meta_eng = st.number_input("Peso Final / Rastro Objetivo (kg)", 400.0, 650.0, 520.0, 10.0)
+    with col_p2:
+        gmd_esperada = st.slider("Ganancia Media Diaria - GMD (kg/día)", 0.8, 2.0, 1.35, 0.05)
+        consumo_ms_porcentaje = st.slider("Consumo de Materia Seca (% PV)", 2.0, 3.5, 2.5, 0.1)
+    with col_p3:
+        precio_venta_destete_actual = st.number_input("Precio de Mercado Becerro Destetado ($/kg)", 40.0, 120.0, 84.0, 1.0)
+        precio_venta_gordo_actual = st.number_input("Precio de Mercado Ganado Gordo ($/kg)", 30.0, 90.0, 60.0, 1.0)
+
+    col_p4, col_p5 = st.columns(2)
+    with col_p4:
+        costo_dieta_engorda = st.number_input("Costo de Dieta de Engorda ($/ton MS)", 2000.0, 12000.0, float(costo_ton_dieta), 200.0)
+    with col_p5:
+        costo_fijo_diario = st.number_input("Costos Fijos, Sanidad y Corrales ($/día/cab)", 1.0, 30.0, 7.5, 0.5)
+
+    # --- MODELO MATEMÁTICO Y FINANCIERO ---
+    ganancia_total_esperada = peso_meta_eng - peso_entrada_eng
+    dias_en_corral_dof = ganancia_total_esperada / gmd_esperada if gmd_esperada > 0 else 0
+    
+    peso_promedio_periodo = (peso_entrada_eng + peso_meta_eng) / 2.0
+    consumo_ms_diario_kg = peso_promedio_periodo * (consumo_ms_porcentaje / 100.0)
+    consumo_total_ms_ton = (consumo_ms_diario_kg * dias_en_corral_dof) / 1000.0
+    
+    costo_alimentacion_total = consumo_total_ms_ton * costo_dieta_engorda
+    costo_fijos_totales_periodo = dias_en_corral_dof * costo_fijo_diario
+    costo_oportunidad_destete = peso_entrada_eng * precio_venta_destete_actual
+    
+    costo_total_operativo_engorda = costo_alimentacion_total + costo_fijos_totales_periodo
+    costo_total_produccion_gordo = costo_oportunidad_destete + costo_total_operativo_engorda
+    
+    ingreso_venta_gordo = peso_meta_eng * precio_venta_gordo_actual
+    utilidad_neta_engorda = ingreso_venta_gordo - costo_total_produccion_gordo
+    punto_equilibrio_gordo = costo_total_produccion_gordo / peso_meta_eng if peso_meta_eng > 0 else 0
+    roi_engorda = (utilidad_neta_engorda / costo_total_produccion_gordo) * 100 if costo_total_produccion_gordo > 0 else 0
+
+    ingreso_venta_destete = costo_oportunidad_destete
+    costo_vaca_por_becerro = (costo_operativo_vaca_ano / (porcentaje_destete / 100.0)) if porcentaje_destete > 0 else costo_operativo_vaca_ano
+    utilidad_neta_destete = ingreso_venta_destete - costo_vaca_por_becerro
+
+    st.markdown("---")
+    st.subheader("🎯 Variables Predictivas & Comparativa de Negocio")
+
+    col_res1, col_res2, col_res3, col_res4 = st.columns(4)
+    with col_res1:
+        st.metric("Días en Corral (DOF)", f"{dias_en_corral_dof:.0f} días", f"GMD: {gmd_esperada} kg/d")
+        st.metric("Consumo Total MS", f"{consumo_total_ms_ton * 1000:,.0f} kg", f"Diario: {consumo_ms_diario_kg:.2f} kg/d")
+    with col_res2:
+        st.metric("Costo Alimentación", f"${costo_alimentacion_total:,.2f} MXN", f"@ ${costo_dieta_engorda:,.0f}/ton")
+        st.metric("Costo Total Engorda", f"${costo_total_operativo_engorda:,.2f} MXN", "Alimento + Fijos")
+    with col_res3:
+        st.metric("Utilidad Neta Engorda", f"${utilidad_neta_engorda:,.2f} MXN", f"ROI: {roi_engorda:.1f}%")
+        st.metric("Punto de Equilibrio", f"${punto_equilibrio_gordo:,.2f} MXN/kg", "Precio mín. venta")
+    with col_res4:
+        st.metric("Venta Ganado Gordo", f"${ingreso_venta_gordo:,.2f} MXN", f"{peso_meta_eng} kg @ ${precio_venta_gordo_actual}")
+        st.metric("Valor Destete (Oportunidad)", f"${ingreso_venta_destete:,.2f} MXN", f"{peso_entrada_eng} kg @ ${precio_venta_destete_actual}")
+
+    st.markdown("---")
+    st.subheader("⚖️ Evaluación Estratégica: Venta al Destete vs. Engorda")
+
+    comparativa_df = pd.DataFrame({
+        "Estrategia Comercial": ["Venta Directa al Destete", "Retención y Engorda a Finalización"],
+        "Peso de Venta (kg)": [peso_entrada_eng, peso_meta_eng],
+        "Precio de Venta ($/kg)": [precio_venta_destete_actual, precio_venta_gordo_actual],
+        "Ingreso Bruto por Animal ($)": [ingreso_venta_destete, ingreso_venta_gordo],
+        "Costos Directos Incurridos ($)": [0.0, costo_total_operativo_engorda],
+        "Utilidad Neta Estimada ($/cabeza)": [utilidad_neta_destete, utilidad_neta_engorda]
+    })
+    st.dataframe(comparativa_df, use_container_width=True, hide_index=True)
+
+    diferencia_utilidad = utilidad_neta_engorda - utilidad_neta_destete
+    if diferencia_utilidad > 0:
+        st.success(f"✅ **Recomendación Gerencial:** Con los precios actuales ($84/kg destete vs $60/kg gordo), la engorda es **rentable**, generando una utilidad adicional de **${diferencia_utilidad:,.2f} MXN por cabeza** frente a vender al destete.")
+    else:
+        st.warning(f"⚠️ **Recomendación Gerencial:** Con un precio de $84.00/kg al destete, el costo de oportunidad es muy elevado frente a $60.00/kg en ganado gordo. La diferencia es de **${diferencia_utilidad:,.2f} MXN**, por lo que financieramente **conviene más vender directamente al destete**.")
+
+with tabs[5]:
     st.header("📊 Finanzas, Márgenes de Ganancia & Proyecciones")
     col1, col2, col3 = st.columns(3)
     with col1:
@@ -475,7 +618,7 @@ with tabs[3]:
     fig_fin.update_traces(line_color="#b91c1c", line_width=3)
     st.plotly_chart(fig_fin, use_container_width=True)
 
-with tabs[4]:
+with tabs[6]:
     st.header("📅 Calendario Inteligente de Servicios y Partos")
     df = db.obtener_animales()
     df_v = df[df['categoria'].isin(['VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)'])] if not df.empty else pd.DataFrame()
@@ -499,7 +642,7 @@ with tabs[4]:
                 else:
                     st.success("✅ Evento guardado correctamente.")
 
-with tabs[5]:
+with tabs[7]:
     st.header("💉 Sanidad Integral Regional (Zacatecas)")
     df = db.obtener_animales()
     if df.empty:
@@ -517,12 +660,12 @@ with tabs[5]:
                 db.registrar_sanidad(id_a, trat, str(f_ap), str(f_prox))
                 st.success("Sanidad registrada exitosamente.")
 
-with tabs[6]:
+with tabs[8]:
     st.header("📊 Estandarización BIF (205 Días) & Gráficas")
     st.markdown("Evaluación genética y de crecimiento estandarizada a 205 días al destete para raza Hereford.")
     st.info("💡 Asegúrese de registrar pesajes de Nacimiento y Destete en la base de datos para generar los cálculos BIF automáticos.")
 
-with tabs[7]:
+with tabs[9]:
     st.header("📄 Generación de Reporte Ejecutivo en PDF")
     pdf_bytes = generar_pdf_cria()
     st.download_button(
@@ -534,7 +677,7 @@ with tabs[7]:
     )
     st.success("¡Reporte listo para descarga con todo el inventario y resumen financiero!")
 
-with tabs[8]:
+with tabs[10]:
     st.header("💬 Asistente IA & Asesoría")
     for m in st.session_state.chat_messages:
         with st.chat_message(m["role"]):
@@ -567,7 +710,7 @@ with tabs[8]:
         else:
             st.warning("⚠️ Completa tu nombre y datos de contacto.")
 
-with tabs[9]:
+with tabs[11]:
     st.header("🌾 Planes de Contingencia, Suplementación & Manejo Sanitario Avanzado")
     st.markdown("""
         ### 🌵 1. Contingencia por Sequía y Estiaje
@@ -605,91 +748,5 @@ with tabs[9]:
         ---
 
         ### 🌙 3. Protocolo Fisiológico de Alimentación Nocturna (Night Feeding)
-        * Suministrar el alimento principal al atardecer (17:00 - 21:00 hrs) desplaza fisiológicamente el inicio de las pariciones hacia las horas de luz diurna, reduciendo la mortalidad neonatal y facilitando la supervisión zootécnica.
+        * Suministrar el alimento principal al atardecer (17:00 - 21:00 hrs) desplaza fisiologically el inicio de las pariciones hacia las horas de luz diurna, reduciendo la mortalidad neonatal y facilitando la supervisión zootécnica.
     """)
-
-with tabs[10]:
-    st.header("📈 Módulo Predictivo: Engorda, Retención y Ciclo Completo (Mercado Real)")
-    st.markdown("Modelo financiero optimizado para comparar con precisión zootécnica la decisión gerencial entre **Vender al Destete** ($84/kg) vs. **Retener para Engorda Intensiva** (Venta a $60/kg en finalización).")
-
-    col_p1, col_p2, col_p3 = st.columns(3)
-    with col_p1:
-        peso_entrada_eng = st.number_input("Peso Inicial al Destete (kg)", min_value=150.0, max_value=350.0, value=float(peso_destete_meta), step=5.0)
-        peso_meta_eng = st.number_input("Peso Final / Rastro Objetivo (kg)", min_value=400.0, max_value=650.0, value=520.0, step=10.0)
-    with col_p2:
-        gmd_esperada = st.slider("Ganancia Media Diaria - GMD (kg/día)", min_value=0.8, max_value=2.0, value=1.35, step=0.05)
-        consumo_ms_porcentaje = st.slider("Consumo de Materia Seca (% del Peso Vivo)", min_value=2.0, max_value=3.5, value=2.5, step=0.1)
-    with col_p3:
-        # Precios configurados de acuerdo al mercado real reportado ($84 destete, $60 gordo)
-        precio_venta_destete_actual = st.number_input("Precio de Mercado Becerro Destetado ($/kg)", min_value=40.0, max_value=120.0, value=84.0, step=1.0)
-        precio_venta_gordo_actual = st.number_input("Precio de Mercado Ganado Gordo ($/kg)", min_value=30.0, max_value=90.0, value=60.0, step=1.0)
-
-    col_p4, col_p5 = st.columns(2)
-    with col_p4:
-        costo_dieta_engorda = st.number_input("Costo de Dieta de Engorda ($/ton MS)", min_value=2000.0, max_value=12000.0, value=float(costo_ton_dieta), step=200.0)
-    with col_p5:
-        costo_fijo_diario = st.number_input("Costos Fijos, Sanidad y Corrales ($/día/cabeza)", min_value=1.0, max_value=30.0, value=7.5, step=0.5)
-
-    # --- MODELO MATEMÁTICO Y FINANCIERO OPTIMIZADO ---
-    ganancia_total_esperada = peso_meta_eng - peso_entrada_eng
-    dias_en_corral_dof = ganancia_total_esperada / gmd_esperada if gmd_esperada > 0 else 0
-    
-    # Consumo diario basado en peso promedio del periodo de engorda
-    peso_promedio_periodo = (peso_entrada_eng + peso_meta_eng) / 2.0
-    consumo_ms_diario_kg = peso_promedio_periodo * (consumo_ms_porcentaje / 100.0)
-    consumo_total_ms_ton = (consumo_ms_diario_kg * dias_en_corral_dof) / 1000.0
-    
-    # Costos detallados de la engorda
-    costo_alimentacion_total = consumo_total_ms_ton * costo_dieta_engorda
-    costo_fijos_totales_periodo = dias_en_corral_dof * costo_fijo_diario
-    costo_oportunidad_destete = peso_entrada_eng * precio_venta_destete_actual
-    
-    costo_total_operativo_engorda = costo_alimentacion_total + costo_fijos_totales_periodo
-    costo_total_produccion_gordo = costo_oportunidad_destete + costo_total_operativo_engorda
-    
-    ingreso_venta_gordo = peso_meta_eng * precio_venta_gordo_actual
-    utilidad_neta_engorda = ingreso_venta_gordo - costo_total_produccion_gordo
-    punto_equilibrio_gordo = costo_total_produccion_gordo / peso_meta_eng if peso_meta_eng > 0 else 0
-    roi_engorda = (utilidad_neta_engorda / costo_total_produccion_gordo) * 100 if costo_total_produccion_gordo > 0 else 0
-
-    # Ingreso y utilidad por venta directa al destete (por cabeza)
-    ingreso_venta_destete = costo_oportunidad_destete
-    # Nota: El costo proporcional de la vaca madre por becerro destetado se puede estimar o comparar directamente
-    costo_vaca_por_becerro = (costo_operativo_vaca_ano / (porcentaje_destete / 100.0)) if porcentaje_destete > 0 else costo_operativo_vaca_ano
-    utilidad_neta_destete = ingreso_venta_destete - costo_vaca_por_becerro
-
-    st.markdown("---")
-    st.subheader("🎯 Variables Predictivas y Financieras del Ciclo Completo")
-
-    col_res1, col_res2, col_res3, col_res4 = st.columns(4)
-    with col_res1:
-        st.metric("Días en Corral (DOF)", f"{dias_en_corral_dof:.0f} días", f"GMD: {gmd_esperada} kg/d")
-        st.metric("Consumo Total MS", f"{consumo_total_ms_ton * 1000:,.0f} kg", f"Diario: {consumo_ms_diario_kg:.2f} kg/d")
-    with col_res2:
-        st.metric("Costo Alimentación", f"${costo_alimentacion_total:,.2f} MXN", f"@ ${costo_dieta_engorda:,.0f}/ton")
-        st.metric("Costo Total Engorda", f"${costo_total_operativo_engorda:,.2f} MXN", "Alimento + Fijos")
-    with col_res3:
-        st.metric("Utilidad Neta Engorda", f"${utilidad_neta_engorda:,.2f} MXN", f"ROI: {roi_engorda:.1f}%")
-        st.metric("Punto de Equilibrio", f"${punto_equilibrio_gordo:,.2f} MXN/kg", "Precio mín. venta")
-    with col_res4:
-        st.metric("Venta Ganado Gordo", f"${ingreso_venta_gordo:,.2f} MXN", f"{peso_meta_eng} kg @ ${precio_venta_gordo_actual}")
-        st.metric("Valor Destete (Oportunidad)", f"${ingreso_venta_destete:,.2f} MXN", f"{peso_entrada_eng} kg @ ${precio_venta_destete_actual}")
-
-    st.markdown("---")
-    st.subheader("⚖️ Análisis Comparativo de Negocio: Venta al Destete vs. Engorda")
-
-    comparativa_df = pd.DataFrame({
-        "Estrategia de Comercialización": ["Venta Directa al Destete", "Retención y Engorda a Finalización"],
-        "Peso de Venta (kg)": [peso_entrada_eng, peso_meta_eng],
-        "Precio de Venta ($/kg)": [precio_venta_destete_actual, precio_venta_gordo_actual],
-        "Ingreso Bruto por Animal ($)": [ingreso_venta_destete, ingreso_venta_gordo],
-        "Costos Directos Incurridos ($)": [0.0, costo_total_operativo_engorda],
-        "Utilidad Neta Estimada ($/cabeza)": [utilidad_neta_destete, utilidad_neta_engorda]
-    })
-    st.dataframe(comparativa_df, use_container_width=True, hide_index=True)
-
-    diferencia_utilidad = utilidad_neta_engorda - utilidad_neta_destete
-    if diferencia_utilidad > 0:
-        st.success(f"✅ **Conclusión Financiera:** Con los precios actuales de mercado ($84/kg al destete vs. $60/kg en gordo), retener el becerro y llevarlo a engorda genera una utilidad neta adicional de **${diferencia_utilidad:,.2f} MXN por cabeza** frente a venderlo inmediatamente al destete.")
-    else:
-        st.warning(f"⚠️ **Conclusión Financiera:** Con un precio de $84.00/kg al destete, el **costo de oportunidad** es muy elevado frente a un precio de venta de $60.00/kg en ganado gordo. La engorda arroja una diferencia de **${diferencia_utilidad:,.2f} MXN**, por lo que financieramente resulta más rentable realizar la venta directa del becerro al destete.")
