@@ -7,6 +7,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 from fpdf import FPDF
 from datetime import datetime, timedelta
+import os
 
 # Configuración obligatoria de la página
 st.set_page_config(
@@ -44,96 +45,106 @@ h1, h2, h3, h4, h5, h6 {
 }
 </style>""", unsafe_allow_html=True)
 
-# --- CLASE DE BASE DE DATOS 100% ROBUSTA ---
+# --- CLASE DE BASE DE DATOS ROBUSTA (CONEXIÓN AISLADA POR MÉTODO) ---
 class CrIA150Database:
     def __init__(self, db_name="cria_elite.db"):
-        try:
-            self.conn = sqlite3.connect(db_name, check_same_thread=False)
-            self.cursor = self.conn.cursor()
-            self._crear_tablas()
-        except Exception as e:
-            st.error(f"Error conectando a la base de datos: {e}")
+        self.db_name = db_name
+        self._crear_tablas()
+
+    def _get_connection(self):
+        return sqlite3.connect(self.db_name, check_same_thread=False)
 
     def _crear_tablas(self):
-        # Tabla de animales sin restricciones restrictivas para evitar fallos de guardado
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS animales (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                siniiga TEXT,
-                arete_propio TEXT,
-                categoria TEXT,
-                raza TEXT,
-                sexo TEXT,
-                fecha_nacimiento TEXT,
-                edad_madre_anos REAL,
-                circunferencia_escrotal REAL DEFAULT NULL
-            )
-        ''')
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS pesajes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                animal_id INTEGER,
-                tipo_pesaje TEXT,
-                fecha_pesaje TEXT,
-                peso_kg REAL,
-                condicion_corporal INTEGER,
-                FOREIGN KEY (animal_id) REFERENCES animales (id)
-            )
-        ''')
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS reproduccion (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                animal_id INTEGER,
-                tipo_evento TEXT,
-                fecha_evento TEXT,
-                fecha_probable_parto TEXT,
-                resultado TEXT,
-                observaciones TEXT,
-                FOREIGN KEY (animal_id) REFERENCES animales (id)
-            )
-        ''')
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS sanidad (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                animal_id INTEGER,
-                tipo_tratamiento TEXT,
-                fecha_aplicacion TEXT,
-                proxima_dosis TEXT,
-                FOREIGN KEY (animal_id) REFERENCES animales (id)
-            )
-        ''')
-        self.cursor.execute('''
-            CREATE TABLE IF NOT EXISTS costos (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                animal_id INTEGER,
-                concepto TEXT,
-                monto_mxn REAL,
-                fecha TEXT,
-                FOREIGN KEY (animal_id) REFERENCES animales (id)
-            )
-        ''')
-        self.conn.commit()
+        try:
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS animales (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    siniiga TEXT,
+                    arete_propio TEXT,
+                    categoria TEXT,
+                    raza TEXT,
+                    sexo TEXT,
+                    fecha_nacimiento TEXT,
+                    edad_madre_anos REAL,
+                    circunferencia_escrotal REAL DEFAULT NULL
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS pesajes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    animal_id INTEGER,
+                    tipo_pesaje TEXT,
+                    fecha_pesaje TEXT,
+                    peso_kg REAL,
+                    condicion_corporal INTEGER,
+                    FOREIGN KEY (animal_id) REFERENCES animales (id)
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS reproduccion (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    animal_id INTEGER,
+                    tipo_evento TEXT,
+                    fecha_evento TEXT,
+                    fecha_probable_parto TEXT,
+                    resultado TEXT,
+                    observaciones TEXT,
+                    FOREIGN KEY (animal_id) REFERENCES animales (id)
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS sanidad (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    animal_id INTEGER,
+                    tipo_tratamiento TEXT,
+                    fecha_aplicacion TEXT,
+                    proxima_dosis TEXT,
+                    FOREIGN KEY (animal_id) REFERENCES animales (id)
+                )
+            ''')
+            cursor.execute('''
+                CREATE TABLE IF NOT EXISTS costos (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    animal_id INTEGER,
+                    concepto TEXT,
+                    monto_mxn REAL,
+                    fecha TEXT,
+                    FOREIGN KEY (animal_id) REFERENCES animales (id)
+                )
+            ''')
+            conn.commit()
+            conn.close()
+        except Exception as e:
+            st.error(f"Error creando tablas en base de datos: {e}")
 
     def registrar_animal(self, siniiga, arete, categoria, raza, sexo, fecha_nac, edad_madre, ce):
         try:
             arete_val = arete.strip() if arete and arete.strip() != "" else f"ARETE-{datetime.now().strftime('%H%M%S')}"
             siniiga_val = siniiga.strip() if siniiga and siniiga.strip() != "" else f"SIN-SINIIGA-{arete_val}"
 
-            self.cursor.execute('''
+            conn = self._get_connection()
+            cursor = conn.cursor()
+            cursor.execute('''
                 INSERT INTO animales (siniiga, arete_propio, categoria, raza, sexo, fecha_nacimiento, edad_madre_anos, circunferencia_escrotal)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ''', (siniiga_val, arete_val, categoria, raza, sexo.upper(), str(fecha_nac), float(edad_madre), ce))
-            self.conn.commit()
-            return True, f"¡Vaca / Animal registrado y guardado con éxito! (Arete: {arete_val}, SINIIGA: {siniiga_val})"
+            conn.commit()
+            conn.close()
+            return True, f"¡Vaca / Animal registrado y guardado con éxito en la base de datos! (Arete: {arete_val}, SINIIGA: {siniiga_val})"
         except Exception as e:
             return False, f"Error al guardar en base de datos: {e}"
 
     def registrar_pesaje(self, animal_id, tipo, fecha, peso, cc):
-        self.cursor.execute('''
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
             INSERT INTO pesajes (animal_id, tipo_pesaje, fecha_pesaje, peso_kg, condicion_corporal)
             VALUES (?, ?, ?, ?, ?)
         ''', (animal_id, tipo.upper(), str(fecha), float(peso), int(cc)))
-        self.conn.commit()
+        conn.commit()
+        conn.close()
 
     def registrar_reproduccion(self, animal_id, tipo_evento, fecha, resultado, obs):
         f_parto_est = None
@@ -142,22 +153,34 @@ class CrIA150Database:
             f_dt_parto = f_dt + timedelta(days=283)
             f_parto_est = f_dt_parto.strftime("%Y-%m-%d")
 
-        self.cursor.execute('''
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
             INSERT INTO reproduccion (animal_id, tipo_evento, fecha_evento, fecha_probable_parto, resultado, observaciones)
             VALUES (?, ?, ?, ?, ?, ?)
         ''', (animal_id, tipo_evento, str(fecha), f_parto_est, resultado, obs))
-        self.conn.commit()
+        conn.commit()
+        conn.close()
         return f_parto_est
 
     def registrar_sanidad(self, animal_id, tratamiento, fecha, prox):
-        self.cursor.execute('''
+        conn = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute('''
             INSERT INTO sanidad (animal_id, tipo_tratamiento, fecha_aplicacion, proxima_dosis)
             VALUES (?, ?, ?, ?)
         ''', (animal_id, tratamiento, str(fecha), str(prox)))
-        self.conn.commit()
+        conn.commit()
+        conn.close()
 
     def obtener_animales(self):
-        return pd.read_sql("SELECT * FROM animales", self.conn)
+        try:
+            conn = self._get_connection()
+            df = pd.read_sql("SELECT * FROM animales", conn)
+            conn.close()
+            return df
+        except Exception:
+            return pd.DataFrame(columns=['id', 'siniiga', 'arete_propio', 'categoria', 'raza', 'sexo', 'fecha_nacimiento', 'edad_madre_anos', 'circunferencia_escrotal'])
 
 db = CrIA150Database()
 
@@ -307,7 +330,7 @@ tabs = st.tabs([
 ])
 
 with tabs[0]:
-    st.header("📝 Alta de Reproductor / Vientre / Cría (Base de Datos)")
+    st.header("📝 Alta de Reproductor / Vientre / Cría (Base de Datos Confiable)")
     st.markdown("Registra y almacena permanentemente las vacas reproductoras, vaquillas de remplazo, crías y sementales en la base de datos.")
     
     with st.form("form_alta_avanzada", clear_on_submit=False):
@@ -326,16 +349,17 @@ with tabs[0]:
         sub = st.form_submit_button("💾 Guardar Animal en Base de Datos")
         if sub:
             if not arete or arete.strip() == "":
-                st.error("⚠️ El Arete Interno / Ganadería es obligatorio.")
+                st.error("⚠️ El Arete Interno / Ganadería es obligatorio para guardar el registro.")
             else:
                 exito, msg = db.registrar_animal(siniiga, arete, categoria, raza, sexo, str(fecha_nacimiento), edad_madre, ce if categoria == "TORO REPRODUCTOR" else None)
                 if exito:
                     st.success(msg)
+                    st.rerun()
                 else:
                     st.error(msg)
 
     st.markdown("---")
-    st.subheader("📋 Inventario Actual de Vacas & Animales en la Base de Datos")
+    st.subheader("📋 Inventario Actual de Vacas & Animales Guardados")
     df_anim = db.obtener_animales()
     if df_anim.empty:
         st.info("No hay animales registrados en la base de datos actualmente.")
@@ -346,7 +370,7 @@ with tabs[0]:
         else:
             df_show = df_anim
         st.dataframe(df_show, use_container_width=True, hide_index=True)
-        st.metric("Total de Animales Guardados", len(df_anim))
+        st.metric("Total de Animales en Base de Datos", len(df_anim))
 
 with tabs[1]:
     st.header("⚖️ Monitoreo de Condición Corporal y Estado Nutricional")
@@ -577,7 +601,6 @@ with tabs[10]:
     ganancia_total_esperada = peso_meta_eng - peso_entrada_eng
     dias_en_corral_dof = ganancia_total_esperada / gmd_esperada if gmd_esperada > 0 else 0
     
-    # Peso promedio durante la engorda para calcular consumo de alimento diario
     peso_promedio_periodo = (peso_entrada_eng + peso_meta_eng) / 2.0
     consumo_ms_diario_kg = peso_promedio_periodo * (consumo_ms_porcentaje / 100.0)
     consumo_total_ms_ton = (consumo_ms_diario_kg * dias_en_corral_dof) / 1000.0
