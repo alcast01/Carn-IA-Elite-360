@@ -218,7 +218,7 @@ with st.sidebar.expander("🐂 Parámetros del Hato & Empresa", expanded=True):
     num_vientres = st.number_input("Número de Vientres en el Hato", min_value=1, max_value=5000, value=100, step=10)
     peso_destete_meta = st.slider("Peso Objetivo al Destete (kg)", min_value=180.0, max_value=300.0, value=230.0, step=5.0)
     porcentaje_destete = st.slider("Porcentaje de Destete Esperado (%)", min_value=60.0, max_value=95.0, value=85.0, step=1.0)
-    precio_venta_kg = st.number_input("Precio de Venta Becerro Destetado (MXN/kg)", min_value=30.0, max_value=100.0, value=65.0, step=1.0)
+    precio_venta_kg = st.number_input("Precio de Venta Becerro Destetado (MXN/kg)", min_value=30.0, max_value=120.0, value=84.0, step=1.0)
     costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre (MXN/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
 
 # --- ENCABEZADO PRINCIPAL ---
@@ -453,7 +453,7 @@ with tabs[2]:
                 })
         st.dataframe(pd.DataFrame(tabla_dieta), use_container_width=True, hide_index=True)
     else:
-        st.error("⚠️ Ajusta las restricciones o disponibilidad para encontrar solución factible.")
+        st.info("ℹ️ **Nota del Optimizador:** Ajusta la disponibilidad de ingredientes y rangos de inclusión en la tabla superior para encontrar una solución matemática factible.")
 
 with tabs[3]:
     st.header("📊 Finanzas, Márgenes de Ganancia & Proyecciones")
@@ -609,71 +609,87 @@ with tabs[9]:
     """)
 
 with tabs[10]:
-    st.header("📈 Módulo Predictivo: Engorda, Retención y Ciclo Completo")
-    st.markdown("Modelación predictiva avanzada para evaluar la rentabilidad de retener becerros al destete y llevarlos a peso de finalización (engorda) en lugar de venderlos inmediatamente.")
+    st.header("📈 Módulo Predictivo: Engorda, Retención y Ciclo Completo (Mercado Real)")
+    st.markdown("Modelo financiero optimizado para comparar con precisión zootécnica la decisión gerencial entre **Vender al Destete** ($84/kg) vs. **Retener para Engorda Intensiva** (Venta a $60/kg en finalización).")
 
     col_p1, col_p2, col_p3 = st.columns(3)
     with col_p1:
-        peso_entrada_eng = st.number_input("Peso Inicial al Destete (kg)", min_value=150.0, max_value=350.0, value=peso_destete_meta, step=5.0)
+        peso_entrada_eng = st.number_input("Peso Inicial al Destete (kg)", min_value=150.0, max_value=350.0, value=float(peso_destete_meta), step=5.0)
         peso_meta_eng = st.number_input("Peso Final / Rastro Objetivo (kg)", min_value=400.0, max_value=650.0, value=520.0, step=10.0)
     with col_p2:
-        gmd_esperada = st.slider("Ganancia Media Diaria - GMD (kg/día)", min_value=0.8, max_value=1.8, value=1.3, step=0.05)
-        consumo_ms_porcentaje = st.slider("Consumo de MS (% del Peso Vivo)", min_value=2.0, max_value=3.5, value=2.6, step=0.1)
+        gmd_esperada = st.slider("Ganancia Media Diaria - GMD (kg/día)", min_value=0.8, max_value=2.0, value=1.35, step=0.05)
+        consumo_ms_porcentaje = st.slider("Consumo de Materia Seca (% del Peso Vivo)", min_value=2.0, max_value=3.5, value=2.5, step=0.1)
     with col_p3:
-        precio_venta_gordo = st.number_input("Precio Proyectado Ganado Gordo (MXN/kg)", min_value=35.0, max_value=90.0, value=58.0, step=1.0)
-        costo_fijo_diario = st.number_input("Costo Fijo / Sanidad / Corral (MXN/día/cab)", min_value=2.0, max_value=20.0, value=6.0, step=0.5)
+        # Precios configurados de acuerdo al mercado real reportado ($84 destete, $60 gordo)
+        precio_venta_destete_actual = st.number_input("Precio de Mercado Becerro Destetado ($/kg)", min_value=40.0, max_value=120.0, value=84.0, step=1.0)
+        precio_venta_gordo_actual = st.number_input("Precio de Mercado Ganado Gordo ($/kg)", min_value=30.0, max_value=90.0, value=60.0, step=1.0)
 
-    # --- CÁLCULOS PREDICTIVOS ---
+    col_p4, col_p5 = st.columns(2)
+    with col_p4:
+        costo_dieta_engorda = st.number_input("Costo de Dieta de Engorda ($/ton MS)", min_value=2000.0, max_value=12000.0, value=float(costo_ton_dieta), step=200.0)
+    with col_p5:
+        costo_fijo_diario = st.number_input("Costos Fijos, Sanidad y Corrales ($/día/cabeza)", min_value=1.0, max_value=30.0, value=7.5, step=0.5)
+
+    # --- MODELO MATEMÁTICO Y FINANCIERO OPTIMIZADO ---
     ganancia_total_esperada = peso_meta_eng - peso_entrada_eng
     dias_en_corral_dof = ganancia_total_esperada / gmd_esperada if gmd_esperada > 0 else 0
     
+    # Consumo diario basado en peso promedio del periodo de engorda
     peso_promedio_periodo = (peso_entrada_eng + peso_meta_eng) / 2.0
     consumo_ms_diario_kg = peso_promedio_periodo * (consumo_ms_porcentaje / 100.0)
     consumo_total_ms_ton = (consumo_ms_diario_kg * dias_en_corral_dof) / 1000.0
     
-    costo_alimentacion_total = consumo_total_ms_ton * costo_ton_dieta
+    # Costos detallados de la engorda
+    costo_alimentacion_total = consumo_total_ms_ton * costo_dieta_engorda
     costo_fijos_totales_periodo = dias_en_corral_dof * costo_fijo_diario
-    costo_oportunidad_becerra = peso_entrada_eng * precio_venta_kg
+    costo_oportunidad_destete = peso_entrada_eng * precio_venta_destete_actual
     
-    costo_total_engorda = costo_alimentacion_total + costo_fijos_totales_periodo
-    costo_total_produccion_gordo = costo_oportunidad_becerra + costo_total_engorda
+    costo_total_operativo_engorda = costo_alimentacion_total + costo_fijos_totales_periodo
+    costo_total_produccion_gordo = costo_oportunidad_destete + costo_total_operativo_engorda
     
-    ingreso_venta_gordo = peso_meta_eng * precio_venta_gordo
+    ingreso_venta_gordo = peso_meta_eng * precio_venta_gordo_actual
     utilidad_neta_engorda = ingreso_venta_gordo - costo_total_produccion_gordo
     punto_equilibrio_gordo = costo_total_produccion_gordo / peso_meta_eng if peso_meta_eng > 0 else 0
     roi_engorda = (utilidad_neta_engorda / costo_total_produccion_gordo) * 100 if costo_total_produccion_gordo > 0 else 0
 
+    # Ingreso y utilidad por venta directa al destete (por cabeza)
+    ingreso_venta_destete = costo_oportunidad_destete
+    # Nota: El costo proporcional de la vaca madre por becerro destetado se puede estimar o comparar directamente
+    costo_vaca_por_becerro = (costo_operativo_vaca_ano / (porcentaje_destete / 100.0)) if porcentaje_destete > 0 else costo_operativo_vaca_ano
+    utilidad_neta_destete = ingreso_venta_destete - costo_vaca_por_becerro
+
     st.markdown("---")
-    st.subheader("🎯 Variables Predictivas Clave para la Toma de Decisiones")
+    st.subheader("🎯 Variables Predictivas y Financieras del Ciclo Completo")
 
     col_res1, col_res2, col_res3, col_res4 = st.columns(4)
     with col_res1:
         st.metric("Días en Corral (DOF)", f"{dias_en_corral_dof:.0f} días", f"GMD: {gmd_esperada} kg/d")
-        st.metric("Consumo Total MS", f"{consumo_total_ms_ton * 1000:,.0f} kg", f"Diario: {consumo_ms_diario_kg:.2f} kg")
+        st.metric("Consumo Total MS", f"{consumo_total_ms_ton * 1000:,.0f} kg", f"Diario: {consumo_ms_diario_kg:.2f} kg/d")
     with col_res2:
-        st.metric("Costo de Alimentación", f"${costo_alimentacion_total:,.2f} MXN", f"@ ${costo_ton_dieta:,.0f}/ton")
-        st.metric("Costo Total Engorda", f"${costo_total_engorda:,.2f} MXN", "Alimento + Fijos")
+        st.metric("Costo Alimentación", f"${costo_alimentacion_total:,.2f} MXN", f"@ ${costo_dieta_engorda:,.0f}/ton")
+        st.metric("Costo Total Engorda", f"${costo_total_operativo_engorda:,.2f} MXN", "Alimento + Fijos")
     with col_res3:
-        st.metric("Utilidad Neta / Animal", f"${utilidad_neta_engorda:,.2f} MXN", f"ROI: {roi_engorda:.1f}%")
-        st.metric("Punto de Equilibrio", f"${punto_equilibrio_gordo:,.2f} MXN/kg", "Precio mínimo venta")
+        st.metric("Utilidad Neta Engorda", f"${utilidad_neta_engorda:,.2f} MXN", f"ROI: {roi_engorda:.1f}%")
+        st.metric("Punto de Equilibrio", f"${punto_equilibrio_gordo:,.2f} MXN/kg", "Precio mín. venta")
     with col_res4:
-        st.metric("Ingreso Venta Gordo", f"${ingreso_venta_gordo:,.2f} MXN", f"{peso_meta_eng} kg @ ${precio_venta_gordo}")
-        st.metric("Valor Destete (Costo Oportunidad)", f"${costo_oportunidad_becerra:,.2f} MXN")
+        st.metric("Venta Ganado Gordo", f"${ingreso_venta_gordo:,.2f} MXN", f"{peso_meta_eng} kg @ ${precio_venta_gordo_actual}")
+        st.metric("Valor Destete (Oportunidad)", f"${ingreso_venta_destete:,.2f} MXN", f"{peso_entrada_eng} kg @ ${precio_venta_destete_actual}")
 
     st.markdown("---")
-    st.subheader("⚖️ Comparativa Estratégica: ¿Vender al Destete vs. Engordar a Finalización?")
+    st.subheader("⚖️ Análisis Comparativo de Negocio: Venta al Destete vs. Engorda")
 
     comparativa_df = pd.DataFrame({
-        "Estrategia Comercial": ["Venta Directa al Destete", "Retención y Engorda (Ciclo Completo)"],
+        "Estrategia de Comercialización": ["Venta Directa al Destete", "Retención y Engorda a Finalización"],
         "Peso de Venta (kg)": [peso_entrada_eng, peso_meta_eng],
-        "Precio de Venta ($/kg)": [precio_venta_kg, precio_venta_gordo],
-        "Ingreso Bruto Total ($)": [costo_oportunidad_becerra, ingreso_venta_gordo],
-        "Costos Incurridos ($)": [0.0, costo_total_engorda],
-        "Utilidad Neta Estimada ($)": [costo_oportunidad_becerra - (peso_entrada_eng * (costo_operativo_vaca_ano/365)*(dias_en_corral_dof)), utilidad_neta_engorda]
+        "Precio de Venta ($/kg)": [precio_venta_destete_actual, precio_venta_gordo_actual],
+        "Ingreso Bruto por Animal ($)": [ingreso_venta_destete, ingreso_venta_gordo],
+        "Costos Directos Incurridos ($)": [0.0, costo_total_operativo_engorda],
+        "Utilidad Neta Estimada ($/cabeza)": [utilidad_neta_destete, utilidad_neta_engorda]
     })
     st.dataframe(comparativa_df, use_container_width=True, hide_index=True)
 
-    if utilidad_neta_engorda > 0:
-        st.success(f"✅ **Recomendación de Negocio:** La engorda y finalización del becerro es **rentable**, generando una utilidad neta adicional de **${utilidad_neta_engorda:,.2f} MXN por cabeza** en comparación con la venta directa al destete.")
+    diferencia_utilidad = utilidad_neta_engorda - utilidad_neta_destete
+    if diferencia_utilidad > 0:
+        st.success(f"✅ **Conclusión Financiera:** Con los precios actuales de mercado ($84/kg al destete vs. $60/kg en gordo), retener el becerro y llevarlo a engorda genera una utilidad neta adicional de **${diferencia_utilidad:,.2f} MXN por cabeza** frente a venderlo inmediatamente al destete.")
     else:
-        st.warning("⚠️ **Recomendación de Negocio:** Con los precios actuales de la dieta o del ganado gordo, la engorda presenta márgenes negativos. Conviene más realizar la venta directa del becerro al destete.")
+        st.warning(f"⚠️ **Conclusión Financiera:** Con un precio de $84.00/kg al destete, el **costo de oportunidad** es muy elevado frente a un precio de venta de $60.00/kg en ganado gordo. La engorda arroja una diferencia de **${diferencia_utilidad:,.2f} MXN**, por lo que financieramente resulta más rentable realizar la venta directa del becerro al destete.")
