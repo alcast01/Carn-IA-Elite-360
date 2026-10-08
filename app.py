@@ -311,8 +311,34 @@ def generar_pdf_cria():
         pdf.cell(95, 7, safe_str(f"{k}:"), 0, 0)
         pdf.cell(95, 7, safe_str(f"{v}"), 0, 1)
 
-    output = pdf.output()
-    return bytes(output) if isinstance(output, (bytes, bytearray)) else output.encode('latin1')
+    # 3. Inventario de Animales y Vientres Registrados en Base de Datos
+    pdf.ln(4)
+    pdf.set_font('Arial', 'B', 11)
+    pdf.cell(0, 8, safe_str("3. Inventario de Animales y Vientres Registrados"), 0, 1)
+    pdf.set_font('Arial', '', 9)
+    df_pdf_anim = db.obtener_animales()
+    if df_pdf_anim.empty:
+        pdf.cell(0, 7, safe_str("No hay animales registrados en la base de datos actualmente."), 0, 1)
+    else:
+        pdf.set_font('Arial', 'B', 9)
+        pdf.cell(40, 6, safe_str("SINIIGA / ID"), 1, 0, 'C')
+        pdf.cell(35, 6, safe_str("Arete"), 1, 0, 'C')
+        pdf.cell(50, 6, safe_str("Categoria"), 1, 0, 'C')
+        pdf.cell(45, 6, safe_str("Raza"), 1, 0, 'C')
+        pdf.cell(20, 6, safe_str("Sexo"), 1, 1, 'C')
+        
+        pdf.set_font('Arial', '', 9)
+        for _, row in df_pdf_anim.iterrows():
+            pdf.cell(40, 6, safe_str(str(row['siniiga']))[:20], 1, 0, 'L')
+            pdf.cell(35, 6, safe_str(str(row['arete_propio']))[:18], 1, 0, 'L')
+            pdf.cell(50, 6, safe_str(str(row['categoria']))[:25], 1, 0, 'L')
+            pdf.cell(45, 6, safe_str(str(row['raza']))[:22], 1, 0, 'L')
+            pdf.cell(20, 6, safe_str(str(row['sexo']))[:10], 1, 1, 'C')
+
+    output = pdf.output(dest='S')
+    if isinstance(output, str):
+        return output.encode('latin1')
+    return bytes(output)
 
 # --- MENÚ DE MÓDULOS (11 TABS) ---
 tabs = st.tabs([
@@ -506,7 +532,7 @@ with tabs[7]:
         mime="application/pdf",
         use_container_width=True
     )
-    st.success("¡Reporte listo para descarga!")
+    st.success("¡Reporte listo para descarga con todo el inventario y resumen financiero!")
 
 with tabs[8]:
     st.header("💬 Asistente IA & Asesoría")
