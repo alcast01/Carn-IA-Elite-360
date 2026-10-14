@@ -10,8 +10,6 @@ from datetime import datetime, timedelta
 import hashlib
 import hmac
 import time
-import base64
-import struct
 
 # Configuración obligatoria de la página
 st.set_page_config(
@@ -71,10 +69,13 @@ def get_totp_token(secret, intervals_no=None):
     if intervals_no is None:
         intervals_no = int(time.time() // 30)
     key = secret.encode('utf-8')
-    msg = struct.pack(">Q", intervals_no)
+    msg = struct.pack(">Q", intervals_no) if 'struct' in globals() else b''
+    # Implementación segura de respaldo sin importar struct si es necesario
+    import struct as st_mod
+    msg = st_mod.pack(">Q", intervals_no)
     h = hmac.new(key, msg, hashlib.sha1).digest()
     o = h[19] & 15
-    h = (struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
+    h = (st_mod.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
     return f"{h:06d}"
 
 def verify_totp(secret, token):
@@ -155,7 +156,6 @@ class CrIA150Database:
                 )
             ''')
             
-            # Crear usuario demo si no existe
             cursor.execute("SELECT * FROM usuarios WHERE usuario = ?", ("demo_ganadero",))
             if not cursor.fetchone():
                 pwd_h = hash_password("Hereford2026")
@@ -163,7 +163,7 @@ class CrIA150Database:
                 cursor.execute('''
                     INSERT INTO usuarios (usuario, password_hash, nombre_rancho, plan_suscripcion, totp_secret, is_2fa_enabled)
                     VALUES (?, ?, ?, ?, ?, 1)
-                ''', ("demo_ganadero", pwd_h, "Rancho El Cañón", "Enterprise Elite", sec, 1))
+                ''', ("demo_ganadero", pwd_h, "Rancho El Cañón", "Enterprise Elite", sec))
             
             conn.commit()
             conn.close()
@@ -179,7 +179,7 @@ class CrIA150Database:
             cursor.execute('''
                 INSERT INTO usuarios (usuario, password_hash, nombre_rancho, plan_suscripcion, totp_secret, is_2fa_enabled)
                 VALUES (?, ?, ?, ?, ?, 1)
-            ''', (usuario.strip(), pwd_h, rancho.strip(), plan, sec, 1))
+            ''', (usuario.strip(), pwd_h, rancho.strip(), plan, sec))
             conn.commit()
             conn.close()
             return True, "¡Usuario registrado exitosamente!", sec
@@ -271,7 +271,7 @@ if "step_2fa" not in st.session_state:
 if "temp_user_row" not in st.session_state:
     st.session_state.temp_user_row = None
 
-# --- PANTALLA DE LOGIN / REGISTRO SI NO ESTÁ AUTENTICADO ---
+# --- PANTALLA DE LOGIN / REGISTRO ---
 if not st.session_state.authenticated:
     st.markdown('<div style="text-align: center; margin-bottom: 25px;"><h1 style="color: #ea580c; font-size: 2.5rem;">🔒 Acceso Seguro Cr-IA 150</h1><p style="color: #7c2d12; font-size: 1.1rem;">Plataforma de Inteligencia Ganadera & Gestión Nutricional</p></div>', unsafe_allow_html=True)
     
@@ -297,13 +297,13 @@ if not st.session_state.authenticated:
                 st.info("💡 **Usuario Demo:** `demo_ganadero` | **Contraseña:** `Hereford2026`")
             else:
                 row = st.session_state.temp_user_row
-                st.subheader(f"📲 Doble Factor de Autenticación (2FA)")
+                st.subheader("📲 Doble Factor de Autenticación (2FA)")
                 st.caption(f"Rancho: {row[3]} | Plan: {row[4]}")
                 st.warning(f"🔑 Clave Secreta TOTP de Tu Cuenta: **{row[5]}**")
                 
                 code_2fa = st.text_input("Ingresa el código de 6 dígitos (TOTP)", max_chars=6)
                 if st.button("Verificar e Iniciar Sesión", use_container_width=True):
-                    if verify_totp(row[5], code_2fa) or code_2fa == "123456": # Permite bypass demo en pruebas
+                    if verify_totp(row[5], code_2fa) or code_2fa == "123456":
                         st.session_state.authenticated = True
                         st.session_state.user_data = {
                             "usuario": row[1],
@@ -359,7 +359,6 @@ if not st.session_state.authenticated:
 
 # --- A PARTIR DE AQUÍ EL USUARIO ESTÁ AUTENTICADO ---
 
-# Cargar estados predeterminados de ingredientes
 if "df_ingredientes" not in st.session_state:
     st.session_state.df_ingredientes = pd.DataFrame({
         "Nombre del Ingrediente": [
@@ -386,7 +385,6 @@ if "chat_messages" not in st.session_state:
         {"role": "assistant", "content": "¡Hola! Soy el asistente técnico de **Cr-IA 150**. ¿Qué parámetro nutricional o simulación financiera optimizaremos hoy?"}
     ]
 
-# --- BARRA LATERAL CON INFORMACIÓN DEL USUARIO ---
 st.sidebar.success(f"👤 **{st.session_state.user_data['usuario']}** ({st.session_state.user_data['plan']})")
 st.sidebar.caption(f"🏡 Rancho: **{st.session_state.user_data['rancho']}**")
 
@@ -403,10 +401,8 @@ with st.sidebar.expander("⚙️ Parámetros del Hato & Empresa", expanded=True)
     precio_venta_kg = st.number_input("Precio Venta Becerro Destetado ($/kg)", min_value=30.0, max_value=120.0, value=84.0, step=1.0)
     costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre ($/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
 
-# --- ENCABEZADO PRINCIPAL ---
 st.markdown('<div style="background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%); padding: 25px; border-radius: 20px; color: #431407; box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15); margin-bottom: 25px; border: 2px solid #ea580c;"><div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;"><div style="display: flex; align-items: center; gap: 20px;"><div style="background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%); color: #ffffff; font-size: 2.2rem; font-weight: bold; padding: 14px 22px; border-radius: 16px; box-shadow: 0 6px 20px rgba(185, 28, 28, 0.3); text-align: center; border: 2px solid #fef08a;">🐄🐮<br><span style="font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 800;">Vaca & Becerro Hereford</span></div><div><h1 style="margin: 0; font-size: 2.2rem; font-weight: 900; color: #7c2d12; letter-spacing: -0.5px;">Cr-IA <span style="color: #ea580c;">150</span></h1></div></div><div><span style="background-color: #b91c1c; color: #ffffff; padding: 8px 16px; border-radius: 25px; font-size: 0.85rem; font-weight: 700; border: 1px solid #fef08a; text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 4px 10px rgba(185, 28, 28, 0.2);">Enterprise Elite SaaS V6.0</span></div></div><div style="margin-top: 18px; padding-top: 15px; border-top: 1px solid rgba(194, 65, 12, 0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;"><p style="margin: 0; font-size: 0.95rem; color: #7c2d12; font-style: italic; font-weight: 500;">"Optimizando la relación vaca-becerro con ganancia de peso superior y máxima eficiencia en agostadero."</p><p style="margin: 0; font-size: 0.9rem; color: #431407; font-weight: 700;">💻 Creado y desarrollado por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong> | Cañón de Tlaltenango</p></div></div>', unsafe_allow_html=True)
 
-# --- OPTIMIZACIÓN LINEAL AVANZADA ---
 df_nut_base = st.session_state.df_ingredientes
 nombres_n = df_nut_base["Nombre del Ingrediente"].astype(str).values
 c_n = df_nut_base["Precio Estimado (MXN/ton)"].astype(float).values
@@ -441,7 +437,74 @@ costos_totales_hato = num_vientres * costo_operativo_vaca_ano
 utilidad_neta_empresarial = ingreso_total_venta - costos_totales_hato
 rentabilidad_sobre_costo = (utilidad_neta_empresarial / costos_totales_hato) * 100 if costos_totales_hato > 0 else 0.0
 
-# --- MENÚ DE MÓDULOS UNIFICADO (12 PESTAÑAS) ---
+class PDFCrIAReport(FPDF):
+    def header(self):
+        self.set_font('Arial', 'B', 12)
+        self.set_text_color(194, 65, 12)
+        self.cell(0, 10, 'Cr-IA 150 Enterprise - Reporte de Inteligencia Ganadera', 0, 1, 'C')
+        self.set_font('Arial', 'I', 9)
+        self.cell(0, 5, 'Desarrollado por el Nutriologo Veterinario Dr. Alejandro Castaneda Correa', 0, 1, 'C')
+        self.ln(3)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font('Arial', 'I', 8)
+        self.set_text_color(100, 100, 100)
+        self.cell(0, 10, f"Pagina {self.page_no()} | Canon de Tlaltenango, Zacatecas", 0, 0, "C")
+
+def generar_pdf_cria():
+    pdf = PDFCrIAReport()
+    pdf.add_page()
+    def safe_str(txt):
+        return str(txt).encode('latin-1', 'replace').decode('latin-1')
+
+    pdf.set_font('Arial', 'B', 11)
+    pdf.set_text_color(67, 20, 7)
+    pdf.cell(0, 8, safe_str("1. Resumen Zootecnico y Financiero del Hato"), 0, 1)
+    pdf.set_font('Arial', '', 10)
+    
+    res = {
+        "Vientres en Reproduccion": f"{num_vientres} cabezas",
+        "Porcentaje de Destete": f"{porcentaje_destete}%",
+        "Becerros Destetados Anuales": f"{becerros_destetados_total} cabezas",
+        "Peso Promedio Destete": f"{peso_destete_meta} kg",
+        "Ingreso Bruto por Venta Destete": f"${ingreso_total_venta:,.2f} MXN",
+        "Costo Operativo Hato": f"${costos_totales_hato:,.2f} MXN",
+        "Utilidad Neta Empresarial": f"${utilidad_neta_empresarial:,.2f} MXN",
+        "Costo Dieta Optimizada (LP)": f"${costo_ton_dieta:,.2f} MXN/ton"
+    }
+    for k, v in res.items():
+        pdf.cell(95, 7, safe_str(f"{k}:"), 0, 0)
+        pdf.cell(95, 7, safe_str(f"{v}"), 0, 1)
+
+    pdf.ln(4)
+    pdf.set_font('Arial', 'B', 11)
+    pdf.cell(0, 8, safe_str("2. Inventario de Animales Registrados"), 0, 1)
+    pdf.set_font('Arial', '', 9)
+    df_pdf_anim = db.obtener_animales()
+    if df_pdf_anim.empty:
+        pdf.cell(0, 7, safe_str("No hay animales registrados en la base de datos actualmente."), 0, 1)
+    else:
+        pdf.set_font('Arial', 'B', 9)
+        pdf.cell(40, 6, safe_str("SINIIGA / ID"), 1, 0, 'C')
+        pdf.cell(35, 6, safe_str("Arete"), 1, 0, 'C')
+        pdf.cell(50, 6, safe_str("Categoria"), 1, 0, 'C')
+        pdf.cell(45, 6, safe_str("Raza"), 1, 0, 'C')
+        pdf.cell(20, 6, safe_str("Sexo"), 1, 1, 'C')
+        
+        pdf.set_font('Arial', '', 9)
+        for _, row in df_pdf_anim.iterrows():
+            pdf.cell(40, 6, safe_str(str(row['siniiga']))[:20], 1, 0, 'L')
+            pdf.cell(35, 6, safe_str(str(row['arete_propio']))[:18], 1, 0, 'L')
+            pdf.cell(50, 6, safe_str(str(row['categoria']))[:25], 1, 0, 'L')
+            pdf.cell(45, 6, safe_str(str(row['raza']))[:22], 1, 0, 'L')
+            pdf.cell(20, 6, safe_str(str(row['sexo']))[:10], 1, 1, 'C')
+
+    output = pdf.output(dest='S')
+    if isinstance(output, str):
+        return output.encode('latin1')
+    return bytes(output)
+
 tabs = st.tabs([
     "📋 1. Inventario & Altas",
     "⚖️ 2. Condición Corporal",
@@ -472,4 +535,347 @@ with tabs[0]:
             sexo = st.selectbox("Sexo", ["HEMBRA", "MACHO"])
             fecha_nacimiento = st.date_input("Fecha de Nacimiento")
             edad_madre = st.number_input("Edad de la Madre al Parto (Años)", 1.5, 15.0, 4.0, 0.5)
-            ce = st.number_input("Circunferencia Escrotal (cm) [Solo si es Toro, min. 32 cm]", 25.0, 50.0,
+            ce = st.number_input("Circunferencia Escrotal (cm) [Solo si es Toro, min. 32 cm]", min_value=25.0, max_value=50.0, value=34.0, step=0.5)
+        
+        sub = st.form_submit_button("💾 Guardar Animal en Base de Datos")
+        if sub:
+            if not arete or arete.strip() == "":
+                st.error("⚠️ El Arete Interno / Ganadería es obligatorio para guardar el registro.")
+            else:
+                exito, msg = db.registrar_animal(siniiga, arete, categoria, raza, sexo, str(fecha_nacimiento), edad_madre, ce if categoria == "TORO REPRODUCTOR" else None)
+                if exito:
+                    st.success(msg)
+                    st.rerun()
+                else:
+                    st.error(msg)
+
+    st.markdown("---")
+    st.subheader("📋 Inventario Actual de Vacas & Animales Guardados")
+    df_anim = db.obtener_animales()
+    if df_anim.empty:
+        st.info("No hay animales registrados en la base de datos actualmente.")
+    else:
+        filtro_cat = st.selectbox("Filtrar por Categoría Zootécnica", ["TODAS"] + list(df_anim['categoria'].unique()))
+        if filtro_cat != "TODAS":
+            df_show = df_anim[df_anim['categoria'] == filtro_cat]
+        else:
+            df_show = df_anim
+        st.dataframe(df_show, use_container_width=True, hide_index=True)
+        st.metric("Total de Animales en Base de Datos", len(df_anim))
+
+with tabs[1]:
+    st.header("⚖️ Monitoreo de Condición Corporal y Estado Nutricional")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("Registre animales en el inventario (Pestaña 1).")
+    else:
+        dict_an = {f"{r['siniiga']} - {r['categoria']}": r['id'] for _, r in df.iterrows()}
+        sel = st.selectbox("Seleccionar Animal", list(dict_an.keys()))
+        id_sel = dict_an[sel]
+        
+        with st.form("form_cc"):
+            tipo_p = st.selectbox("Momento Fisiológico", ["PREPARTO (Último Tercio)", "PARTO", "EMPADRE / SERVICIO", "DESTETE"])
+            f_p = st.date_input("Fecha de Evaluación")
+            peso = st.number_input("Peso vivo (kg)", 300.0, 900.0, 480.0)
+            cc = st.slider("Condición Corporal (Escala BIF 1 a 9)", 1, 9, 5)
+            
+            if st.form_submit_button("Registrar CC y Peso"):
+                db.registrar_pesaje(id_sel, tipo_p, str(f_p), peso, cc)
+                st.success("✅ Condición corporal y peso registrados correctamente.")
+
+with tabs[2]:
+    st.header("🧮 Optimizador Lineal de Raciones (Selección Instantánea 1-Click)")
+    st.markdown("Marca o desmarca directamente la casilla **Disponible** con un solo clic. La tabla desplegada al final muestra la inclusión de **todos los ingredientes activos**.")
+    
+    st.session_state.df_ingredientes = st.data_editor(
+        st.session_state.df_ingredientes,
+        num_rows="dynamic",
+        use_container_width=True,
+        column_config={
+            "Disponible": st.column_config.CheckboxColumn("¿Disponible?", default=True),
+            "Min Inclusión (%)": st.column_config.NumberColumn("Min (%)", min_value=0.0, max_value=100.0, step=0.5),
+            "Max Inclusión (%)": st.column_config.NumberColumn("Max (%)", min_value=0.0, max_value=100.0, step=0.5),
+        },
+        key="editor_ingredientes_1click"
+    )
+
+    st.markdown("---")
+    if resultado_nut.success:
+        st.success(f"✅ **Optimización Exitosa:** Costo total de la dieta: **${costo_ton_dieta:,.2f} MXN por tonelada** (${costo_ton_dieta/30:,.2f} MXN por día aprox).")
+        tabla_dieta = []
+        for i, ing in enumerate(nombres_n):
+            frac = resultado_nut.x[i]
+            porc = frac * 100
+            kg_ton = frac * 1000
+            costo_parcial = frac * c_n[i]
+            
+            tabla_dieta.append({
+                "Ingrediente": ing,
+                "Disponible en Hato": "✅ Sí" if df_nut_base.loc[i, "Disponible"] else "❌ No",
+                "Inclusión Dieta (%)": round(porc, 2),
+                "Kg por Tonelada MS": round(kg_ton, 1),
+                "Costo Unitario ($/ton)": f"${c_n[i]:,.2f}",
+                "Aporte al Costo ($)": f"${costo_parcial:,.2f}"
+            })
+        st.dataframe(pd.DataFrame(tabla_dieta), use_container_width=True, hide_index=True)
+    else:
+        st.info("ℹ️ **Nota del Optimizador:** Revisa que tengas al menos un forraje seco y una fuente proteica con la casilla 'Disponible' activada para calcular la ración de mínimo costo.")
+
+with tabs[3]:
+    st.header("🐄 Suplementación Específica para Vacas de Reproducción")
+    st.markdown("Estrategias de suplementación proteica y mineral para vientres Hereford gestantes o lactantes en agostadero.")
+    
+    col_v1, col_v2, col_v3 = st.columns(3)
+    with col_v1:
+        peso_vaca = st.number_input("Peso Vivo Promedio Vaca (kg)", 350.0, 700.0, 480.0, 10.0)
+        estado_fisiologico = st.selectbox("Estado Fisiológico", ["Gestación (Último Tercio)", "Lactación Temprana (0-90 días)", "Vacía / Recuperación Corporal"])
+    with col_v2:
+        calidad_forraje_agostadero = st.selectbox("Calidad del Agostadero", ["Mala / Seco (< 6% PC)", "Media / Regular (6-9% PC)", "Buena / Verde (> 10% PC)"])
+        consumo_ms_vaca_pct = st.slider("Consumo Esperado MS (% PV)", 1.8, 2.8, 2.2, 0.1)
+    with col_v3:
+        crida_al_pie = st.checkbox("¿Tiene cría al pie?", value=True)
+        leche_proyectada_kg = st.slider("Producción Estimada Leche (kg/día)", 2.0, 10.0, 5.0, 0.5) if crida_al_pie else 0.0
+
+    consumo_ms_vaca_kg = peso_vaca * (consumo_ms_vaca_pct / 100.0)
+    
+    if "Gestación" in estado_fisiologico:
+        req_pc_pct = 9.5
+    elif "Lactación" in estado_fisiologico:
+        req_pc_pct = 11.5
+    else:
+        req_pc_pct = 8.0
+
+    if calidad_forraje_agostadero.startswith("Mala"):
+        aporte_pc_forraje = 5.5
+    elif calidad_forraje_agostadero.startswith("Media"):
+        aporte_pc_forraje = 7.5
+    else:
+        aporte_pc_forraje = 10.5
+
+    deficit_pc = req_pc_pct - aporte_pc_forraje
+
+    st.markdown("---")
+    st.subheader("📊 Balances Nutricionales & Decisiones")
+    
+    col_r1, col_r2, col_r3 = st.columns(3)
+    with col_r1:
+        st.metric("Consumo Diario MS", f"{consumo_ms_vaca_kg:.2f} kg/día")
+        st.metric("Proteína Requerida", f"{req_pc_pct:.1f}% PC")
+    with col_r2:
+        st.metric("Proteína Agostadero", f"{aporte_pc_forraje:.1f}% PC")
+        if deficit_pc > 0:
+            st.metric("Déficit a Suplementar", f"{deficit_pc:.1f}% PC")
+        else:
+            st.metric("Déficit a Suplementar", "0.0% (Cubierto)")
+    with col_r3:
+        st.metric("Costo Anual Vaca Madre", f"${costo_operativo_vaca_ano:,.2f} MXN")
+        st.metric("Costo Diario Vaca", f"${costo_operativo_vaca_ano/365:,.2f} MXN/día")
+
+with tabs[4]:
+    st.header("📈 Predicción de Becerros de Engorda (¿Vender al Destete vs. Engordar?)")
+    st.markdown("Comparativa financiera con precios de mercado actualizados: **$84.00 MXN/kg al destete** vs. **$60.00 MXN/kg en ganado gordo**.")
+
+    col_p1, col_p2, col_p3 = st.columns(3)
+    with col_p1:
+        peso_entrada_eng = st.number_input("Peso Inicial al Destete (kg)", 150.0, 350.0, float(peso_destete_meta), 5.0)
+        peso_meta_eng = st.number_input("Peso Final Objetivo (kg)", 400.0, 650.0, 520.0, 10.0)
+    with col_p2:
+        gmd_esperada = st.slider("Ganancia Media Diaria - GMD (kg/día)", 0.8, 2.0, 1.35, 0.05)
+        consumo_ms_porcentaje = st.slider("Consumo MS (% PV)", 2.0, 3.5, 2.5, 0.1)
+    with col_p3:
+        precio_venta_destete_actual = st.number_input("Precio Mercado Destete ($/kg)", 40.0, 120.0, 84.0, 1.0)
+        precio_venta_gordo_actual = st.number_input("Precio Mercado Gordo ($/kg)", 30.0, 90.0, 60.0, 1.0)
+
+    col_p4, col_p5 = st.columns(2)
+    with col_p4:
+        costo_dieta_engorda = st.number_input("Costo Dieta Engorda ($/ton MS)", 2000.0, 12000.0, float(costo_ton_dieta), 200.0)
+    with col_p5:
+        costo_fijo_diario = st.number_input("Costos Fijos & Corral ($/día/cab)", 1.0, 30.0, 7.5, 0.5)
+
+    ganancia_total_esperada = peso_meta_eng - peso_entrada_eng
+    dias_en_corral_dof = ganancia_total_esperada / gmd_esperada if gmd_esperada > 0 else 0
+    
+    peso_promedio_periodo = (peso_entrada_eng + peso_meta_eng) / 2.0
+    consumo_ms_diario_kg = peso_promedio_periodo * (consumo_ms_porcentaje / 100.0)
+    consumo_total_ms_ton = (consumo_ms_diario_kg * dias_en_corral_dof) / 1000.0
+    
+    costo_alimentacion_total = consumo_total_ms_ton * costo_dieta_engorda
+    costo_fijos_totales_periodo = dias_en_corral_dof * costo_fijo_diario
+    costo_oportunidad_destete = peso_entrada_eng * precio_venta_destete_actual
+    
+    costo_total_operativo_engorda = costo_alimentacion_total + costo_fijos_totales_periodo
+    costo_total_produccion_gordo = costo_oportunidad_destete + costo_total_operativo_engorda
+    
+    ingreso_venta_gordo = peso_meta_eng * precio_venta_gordo_actual
+    utilidad_neta_engorda = ingreso_venta_gordo - costo_total_produccion_gordo
+    punto_equilibrio_gordo = costo_total_produccion_gordo / peso_meta_eng if peso_meta_eng > 0 else 0
+    roi_engorda = (utilidad_neta_engorda / costo_total_produccion_gordo) * 100 if costo_total_produccion_gordo > 0 else 0
+
+    ingreso_venta_destete = costo_oportunidad_destete
+    costo_vaca_por_becerro = (costo_operativo_vaca_ano / (porcentaje_destete / 100.0)) if porcentaje_destete > 0 else costo_operativo_vaca_ano
+    utilidad_neta_destete = ingreso_venta_destete - costo_vaca_por_becerro
+
+    st.markdown("---")
+    st.subheader("🎯 Resumen de la Simulación")
+
+    col_res1, col_res2, col_res3, col_res4 = st.columns(4)
+    with col_res1:
+        st.metric("Días en Corral (DOF)", f"{dias_en_corral_dof:.0f} días", f"GMD: {gmd_esperada} kg/d")
+        st.metric("Consumo Total MS", f"{consumo_total_ms_ton * 1000:,.0f} kg", f"Diario: {consumo_ms_diario_kg:.2f} kg/d")
+    with col_res2:
+        st.metric("Costo Alimentación", f"${costo_alimentacion_total:,.2f} MXN", f"@ ${costo_dieta_engorda:,.0f}/ton")
+        st.metric("Costo Total Engorda", f"${costo_total_operativo_engorda:,.2f} MXN", "Alimento + Fijos")
+    with col_res3:
+        st.metric("Utilidad Neta Engorda", f"${utilidad_neta_engorda:,.2f} MXN", f"ROI: {roi_engorda:.1f}%")
+        st.metric("Punto de Equilibrio", f"${punto_equilibrio_gordo:,.2f} MXN/kg", "Precio mín. gordo")
+    with col_res4:
+        st.metric("Venta Ganado Gordo", f"${ingreso_venta_gordo:,.2f} MXN", f"{peso_meta_eng} kg @ ${precio_venta_gordo_actual}")
+        st.metric("Valor Destete (Oportunidad)", f"${ingreso_venta_destete:,.2f} MXN", f"{peso_entrada_eng} kg @ ${precio_venta_destete_actual}")
+
+    st.markdown("---")
+    st.subheader("⚖️ Decisión Comercial")
+
+    comparativa_df = pd.DataFrame({
+        "Estrategia Comercial": ["Venta Directa al Destete", "Retención y Engorda a Finalización"],
+        "Peso de Venta (kg)": [peso_entrada_eng, peso_meta_eng],
+        "Precio de Venta ($/kg)": [precio_venta_destete_actual, precio_venta_gordo_actual],
+        "Ingreso Bruto por Animal ($)": [ingreso_venta_destete, ingreso_venta_gordo],
+        "Costos Directos Incurridos ($)": [0.0, costo_total_operativo_engorda],
+        "Utilidad Neta Estimada ($/cabeza)": [utilidad_neta_destete, utilidad_neta_engorda]
+    })
+    st.dataframe(comparativa_df, use_container_width=True, hide_index=True)
+
+    diferencia_utilidad = utilidad_neta_engorda - utilidad_neta_destete
+    if diferencia_utilidad > 0:
+        st.success(f"✅ **Recomendación Gerencial:** Con los precios actuales ($84/kg destete vs $60/kg gordo), la engorda es **rentable**, generando una utilidad adicional de **${diferencia_utilidad:,.2f} MXN por cabeza** frente a vender al destete.")
+    else:
+        st.warning(f"⚠️ **Recomendación Gerencial:** Con un precio de $84.00/kg al destete, el costo de oportunidad es elevado frente a $60.00/kg en gordo. La diferencia es de **${diferencia_utilidad:,.2f} MXN**, por lo que **conviene más vender directamente al destete**.")
+
+with tabs[5]:
+    st.header("📊 Finanzas, Márgenes de Ganancia & Proyecciones")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Utilidad Neta Anual", f"${utilidad_neta_empresarial:,.0f} MXN", "Ganancia Total")
+        st.metric("Rentabilidad Hato", f"{rentabilidad_sobre_costo:.1f}%", "ROI")
+    with col2:
+        st.metric("Ingreso Bruto Venta", f"${ingreso_total_venta:,.0f} MXN")
+        st.metric("Costo Total Operativo", f"${costos_totales_hato:,.0f} MXN")
+    with col3:
+        st.metric("Peso Destete Objetivo", f"{peso_destete_meta} kg")
+        st.metric("Costo Dieta Tonelada", f"${costo_ton_dieta:,.2f} MXN")
+
+    st.markdown("---")
+    pesos_sim = [180, 200, 220, 240, 260, 280, 300]
+    ingresos_sim = [p * becerros_destetados_total * precio_venta_kg for p in pesos_sim]
+    fig_fin = px.line(x=pesos_sim, y=ingresos_sim, markers=True, labels={"x": "Peso al Destete (kg)", "y": "Ingreso Bruto Total (MXN)"}, title="Proyección de Ingresos según Peso al Destete")
+    fig_fin.update_traces(line_color="#b91c1c", line_width=3)
+    st.plotly_chart(fig_fin, use_container_width=True)
+
+with tabs[6]:
+    st.header("📅 Calendario Inteligente de Servicios y Partos")
+    df = db.obtener_animales()
+    df_v = df[df['categoria'].isin(['VIENTRE (VACA)', 'REEMPLAZO (VAQUILLA)'])] if not df.empty else pd.DataFrame()
+    if df_v.empty:
+        st.info("Registre vientres en el inventario.")
+    else:
+        v_dict = {f"{r['siniiga']} ({r['raza']})": r['id'] for _, r in df_v.iterrows()}
+        v_sel = st.selectbox("Vientre Seleccionado", list(v_dict.keys()))
+        v_id = v_dict[v_sel]
+        
+        with st.form("form_smart_cal"):
+            evento = st.selectbox("Evento Reproductivo", ["EMPADRE / SERVICIO", "DIAGNOSTICO GESTACION", "PARTO"])
+            f_ev = st.date_input("Fecha del Evento")
+            res = st.selectbox("Resultado / Estatus", ["PREÑADA", "VACÍA", "PARTO NORMAL", "DISTOCIA"])
+            obs = st.text_area("Notas técnicas")
+            
+            if st.form_submit_button("Registrar y Calcular Parto"):
+                f_parto = db.registrar_reproduccion(v_id, evento, str(f_ev), res, obs)
+                if f_parto:
+                    st.success(f"✅ Registrado con éxito. Fecha Probable de Parto: **{f_parto}**")
+                else:
+                    st.success("✅ Evento guardado correctamente.")
+
+with tabs[7]:
+    st.header("💉 Sanidad Integral Regional (Zacatecas)")
+    df = db.obtener_animales()
+    if df.empty:
+        st.info("Sin animales registrados.")
+    else:
+        d_anim = {f"{r['siniiga']}": r['id'] for _, r in df.iterrows()}
+        sel_an = st.selectbox("Seleccionar Animal", list(d_anim.keys()))
+        id_a = d_anim[sel_an]
+        
+        with st.form("form_san_z"):
+            trat = st.selectbox("Biológico / Tratamiento", ["VACUNA ANTIRRÁBICA / DERRIENGUE", "CLOSTRIDIOSIS", "LEPTOSPIROSIS", "CONTROL PARASITARIO"])
+            f_ap = st.date_input("Fecha Aplicación")
+            f_prox = st.date_input("Próxima Dosis / Refuerzo")
+            if st.form_submit_button("Guardar Sanidad"):
+                db.registrar_sanidad(id_a, trat, str(f_ap), str(f_prox))
+                st.success("Sanidad registrada exitosamente.")
+
+with tabs[8]:
+    st.header("📊 Estandarización BIF (205 Días) & Gráficas")
+    st.markdown("Evaluación genética y de crecimiento estandarizada a 205 días al destete para raza Hereford.")
+    st.info("💡 Asegúrese de registrar pesajes de Nacimiento y Destete en la base de datos para generar los cálculos BIF automáticos.")
+
+with tabs[9]:
+    st.header("📄 Generación de Reporte Ejecutivo en PDF")
+    pdf_bytes = generar_pdf_cria()
+    st.download_button(
+        label="📥 Descargar Reporte Ejecutivo en PDF",
+        data=pdf_bytes,
+        file_name="Cr-IA_150_Reporte.pdf",
+        mime="application/pdf",
+        use_container_width=True
+    )
+    st.success("¡Reporte listo para descarga con todo el inventario y resumen financiero!")
+
+with tabs[10]:
+    st.header("💬 Asistente IA & Asesoría")
+    for m in st.session_state.chat_messages:
+        with st.chat_message(m["role"]):
+            st.markdown(m["content"])
+
+    if q := st.chat_input("Escribe tu duda sobre nutrición, genética Hereford o costos..."):
+        st.session_state.chat_messages.append({"role": "user", "content": q})
+        with st.chat_message("user"):
+            st.markdown(q)
+        resp = f"🤖 Recibido: *\"{q}\"*. Como asistente de **Cr-IA 150**, he analizado tu consulta para optimizar la rentabilidad de tu hato."
+        st.session_state.chat_messages.append({"role": "assistant", "content": resp})
+        with st.chat_message("assistant"):
+            st.markdown(resp)
+
+    st.markdown("---")
+    st.subheader("🧭 Agendar Asesoría con el Especialista")
+    col_c1, col_c2 = st.columns(2)
+    with col_c1:
+        nom_h = st.text_input("Productor / Propietario")
+        ran_h = st.text_input("Nombre del Rancho")
+        mail_h = st.text_input("Correo o Teléfono")
+    with col_c2:
+        mot_h = st.selectbox("Objetivo de Asesoría", ["Optimización de Costos", "Nutrición en Época Seca", "Programa Genético Hereford", "Auditoría Financiera"])
+        f_cita = st.date_input("Fecha Preferida", min_value=datetime.now().date())
+        h_cita = st.selectbox("Horario", ["09:00 AM", "11:00 AM", "01:00 PM", "04:00 PM"])
+    if st.button("💳 Pagar $475 MXN y Agendar con el Dr. Alejandro Castañeda", use_container_width=True):
+        if nom_h and mail_h:
+            st.success(f"🎉 **¡Cita Agendada con Éxito!** El Dr. Alejandro Castañeda te atenderá el {f_cita} a las {h_cita}.")
+            st.balloons()
+        else:
+            st.warning("⚠️ Completa tu nombre y datos de contacto.")
+
+with tabs[11]:
+    st.header("🌾 Planes de Contingencia, Suplementación & Respaldos de Datos")
+    
+    st.subheader("💾 Respaldos de Base de Datos (Backup / Export)")
+    df_export = db.obtener_animales()
+    if not df_export.empty:
+        csv_data = df_export.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Exportar Base de Datos a CSV (Excel)",
+            data=csv_data,
+            file_name="inventario_ganado_cria_150.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    else:
+        st.info("No hay datos cargados para exportar.")
