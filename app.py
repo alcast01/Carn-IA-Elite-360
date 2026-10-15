@@ -19,7 +19,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILOS CSS DE NIVEL EMPRESARIAL Y REDISEÑO DE LOGOTIPO ---
+# --- ESTILOS CSS DE NIVEL EMPRESARIAL Y REDISEÑO ---
 st.markdown("""<style>
 .main { background-color: #fffaf8; }
 .stMetric {
@@ -53,6 +53,8 @@ h1, h2, h3, h4, h5, h6 {
     border-radius: 20px;
     border: 2px solid #fed7aa;
     box-shadow: 0 10px 30px rgba(194, 65, 12, 0.12);
+    max-width: 550px;
+    margin: 0 auto;
 }
 .brand-header {
     background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%);
@@ -277,11 +279,11 @@ if "step_2fa" not in st.session_state:
 if "temp_user_row" not in st.session_state:
     st.session_state.temp_user_row = None
 
-# --- PÁGINA DE INICIO / AUTENTICACIÓN REDISEÑADA ---
+# --- PÁGINA DE INICIO / AUTENTICACIÓN SEPARADA Y ORGANIZADA ---
 if not st.session_state.authenticated:
     st.markdown("""
         <div class="brand-header">
-            <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 10px;">
+            <svg width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
                 <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
                 <path d="M2 17l10 5 10-5"></path>
                 <path d="M2 12l10 5 10-5"></path>
@@ -295,20 +297,25 @@ if not st.session_state.authenticated:
             </p>
         </div>
     """, unsafe_allow_html=True)
-    
-    col_auth, col_info = st.columns([1, 1], gap="large")
-    
-    with col_auth:
-        st.markdown('<div class="auth-container">', unsafe_allow_html=True)
-        st.subheader("🛡️ Portal de Acceso Seguro Ganadero")
-        tab_log, tab_reg = st.tabs(["🔑 Iniciar Sesión", "📝 Registrarse & Plan"])
-        
-        with tab_log:
+
+    # Pestañas principales de la página de bienvenida (Separación Clara)
+    landing_tab1, landing_tab2, landing_tab3 = st.tabs([
+        "🔑 Iniciar Sesión (Acceso Seguro)", 
+        "📝 Registro de Cuenta Nueva", 
+        "💎 Planes de Suscripción & Licenciamiento"
+    ])
+
+    with landing_tab1:
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_l1, col_l2, col_l3 = st.columns([1, 1.5, 1])
+        with col_l2:
+            st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+            st.subheader("🛡️ Portal de Autenticación")
             if not st.session_state.step_2fa:
                 user_input = st.text_input("Usuario / Ganadero")
                 pwd_input = st.text_input("Contraseña", type="password")
                 
-                if st.button("Continuar a Autenticación 2FA", use_container_width=True):
+                if st.button("Continuar a Verificación 2FA", use_container_width=True):
                     row = db.obtener_usuario(user_input)
                     if row and row[2] == hash_password(pwd_input):
                         st.session_state.temp_user_row = row
@@ -341,18 +348,24 @@ if not st.session_state.authenticated:
                 if st.button("← Cancelar", use_container_width=True):
                     st.session_state.step_2fa = False
                     st.rerun()
-        
-        with tab_reg:
-            new_user = st.text_input("Nuevo Usuario")
-            new_pwd = st.text_input("Nueva Contraseña", type="password")
+            st.markdown('</div>', unsafe_allow_html=True)
+
+    with landing_tab2:
+        st.markdown("<br>", unsafe_allow_html=True)
+        col_r1, col_r2, col_r3 = st.columns([1, 1.5, 1])
+        with col_r2:
+            st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+            st.subheader("📝 Creación de Cuenta Ganadera")
+            new_user = st.text_input("Nuevo Usuario (ID)")
+            new_pwd = st.text_input("Contraseña Segura", type="password")
             new_rancho = st.text_input("Nombre de tu Rancho / Ganadería")
-            new_plan = st.selectbox("Plan de Suscripción Pecuario", [
+            new_plan = st.selectbox("Selecciona tu Plan de Suscripción", [
                 "Rancho Pyme ($499 MXN/mes - Hasta 100 Vientres)",
                 "Enterprise Elite ($1,250 MXN/mes - Vientres Ilimitados + LP + Predictivo)",
                 "Corporativo / Multirancho ($2,800 MXN/mes - Soporte VIP & API)"
             ])
             
-            if st.button("Crear Cuenta Ganadera", use_container_width=True):
+            if st.button("Registrar Cuenta y Generar 2FA", use_container_width=True):
                 if new_user and new_pwd and new_rancho:
                     exito, msg, sec = db.registrar_usuario(new_user, new_pwd, new_rancho, new_plan.split(" (")[0])
                     if exito:
@@ -360,24 +373,63 @@ if not st.session_state.authenticated:
                     else:
                         st.error(msg)
                 else:
-                    st.warning("Completa todos los campos requeridos.")
-        st.markdown('</div>', unsafe_allow_html=True)
+                    st.warning("⚠️ Completa todos los campos requeridos.")
+            st.markdown('</div>', unsafe_allow_html=True)
 
-    with col_info:
-        st.markdown("""
-        ### 💎 Planes de Suscripción Ganaderos Adaptados
-
-        | Característica | **Rancho Pyme** | **Enterprise Elite** | **Corporativo** |
-        | :--- | :---: | :---: | :---: |
-        | **Inversión Mensual** | **$499 MXN** | **$1,250 MXN** | **$2,800 MXN** |
-        | **Capacidad de Vientres** | Hasta 100 | **Ilimitado** | **Multirancho** |
-        | **Inventario & Sanidad SQLite** | ✅ | ✅ | ✅ |
-        | **Optimizador LP Raciones** | Básico | **Avanzado 1-Click** | **Personalizado** |
-        | **Predicción Engorda (Destete vs Gordo)** | ❌ | ✅ **Matriz Real** | ✅ **Monte Carlo** |
-        | **Doble Factor de Autenticación (2FA)** | ✅ | ✅ | ✅ |
-        | **Asesoría Nutricional VIP** | ❌ | ✅ **Incluida** | ✅ **Directa 24/7** |
-        """)
-        st.info("💡 **Ventaja Competitiva:** Cr-IA 150 integra programación lineal de mínimo costo con algoritmos de sensibilidad de precios en tiempo real para maximizar el margen de utilidad por cabeza.")
+    with landing_tab3:
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #7c2d12;'>💎 Conoce Nuestros Planes de Licenciamiento Pecuario</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #9a3412;'>Elige la potencia tecnológica que mejor se adapte a las necesidades operativas de tu rancho.</p>", unsafe_allow_html=True)
+        st.markdown("<br>", unsafe_allow_html=True)
+        
+        col_p1, col_p2, col_p3 = st.columns(3, gap="medium")
+        with col_p1:
+            st.markdown("""
+                <div style="background: #ffffff; padding: 25px; border-radius: 16px; border: 2px solid #fed7aa; box-shadow: 0 8px 20px rgba(194,65,12,0.1); height: 100%;">
+                    <h3 style="color: #9a3412; margin-top: 0;">🌱 Rancho Pyme</h3>
+                    <h2 style="color: #ea580c; font-size: 2rem; margin: 10px 0;">$499 <span style="font-size: 1rem; color: #666;">MXN / mes</span></h2>
+                    <p style="color: #555; font-size: 0.9rem;">Ideal para pequeños productores que buscan digitalizar su hato con precisión.</p>
+                    <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 15px 0;">
+                    <ul style="padding-left: 20px; color: #333; font-size: 0.9rem;">
+                        <li>Hasta 100 vientres registrados</li>
+                        <li>Inventario SQLite & Sanidad</li>
+                        <li>Optimizador LP de raciones básico</li>
+                        <li>Seguridad 2FA TOTP integrada</li>
+                    </ul>
+                </div>
+            """, unsafe_allow_html=True)
+        with col_p2:
+            st.markdown("""
+                <div style="background: #fff7ed; padding: 25px; border-radius: 16px; border: 3px solid #ea580c; box-shadow: 0 10px 25px rgba(234,88,12,0.2); height: 100%;">
+                    <span style="background: #ea580c; color: white; padding: 3px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Más Popular</span>
+                    <h3 style="color: #9a3412; margin-top: 8px;">🚀 Enterprise Elite</h3>
+                    <h2 style="color: #b91c1c; font-size: 2rem; margin: 10px 0;">$1,250 <span style="font-size: 1rem; color: #666;">MXN / mes</span></h2>
+                    <p style="color: #555; font-size: 0.9rem;">Para ranchos consolidados que requieren optimización matemática y predictiva total.</p>
+                    <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 15px 0;">
+                    <ul style="padding-left: 20px; color: #333; font-size: 0.9rem;">
+                        <li>Vientres ilimitados en base de datos</li>
+                        <li>Optimizador LP de 1 clic avanzado</li>
+                        <li>Predictivo de Engorda (Destete vs Gordo)</li>
+                        <li>Reportes Ejecutivos PDF automáticos</li>
+                        <li>Asesoría con Dr. Alejandro Castañeda</li>
+                    </ul>
+                </div>
+            """, unsafe_allow_html=True)
+        with col_p3:
+            st.markdown("""
+                <div style="background: #ffffff; padding: 25px; border-radius: 16px; border: 2px solid #fed7aa; box-shadow: 0 8px 20px rgba(194,65,12,0.1); height: 100%;">
+                    <h3 style="color: #9a3412; margin-top: 0;">🏢 Corporativo</h3>
+                    <h2 style="color: #ea580c; font-size: 2rem; margin: 10px 0;">$2,800 <span style="font-size: 1rem; color: #666;">MXN / mes</span></h2>
+                    <p style="color: #555; font-size: 0.9rem;">Diseñado para corporativos pecuarios, remates y múltiples ranchos.</p>
+                    <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 15px 0;">
+                    <ul style="padding-left: 20px; color: #333; font-size: 0.9rem;">
+                        <li>Gestión multirancho simultánea</li>
+                        <li>Modelación Monte Carlo avanzada</li>
+                        <li>Exportación masiva y API personalizada</li>
+                        <li>Soporte técnico prioritario 24/7</li>
+                    </ul>
+                </div>
+            """, unsafe_allow_html=True)
     st.stop()
 
 # --- A PARTIR DE AQUÍ EL USUARIO ESTÁ AUTENTICADO ---
