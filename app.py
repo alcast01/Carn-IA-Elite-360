@@ -12,63 +12,125 @@ import hmac
 import time
 import struct
 
-# Configuración obligatoria de la página
+# Configuración principal de la página Streamlit
 st.set_page_config(
-    page_title="Cr-IA 150 | Enterprise Livestock SaaS & Security",
+    page_title="Cr-IA 150 | Enterprise Livestock Intelligence",
     page_icon="🐄",
     layout="wide"
 )
 
-# --- ESTILOS CSS DE NIVEL EMPRESARIAL Y REDISEÑO ---
+# --- ESTILOS CSS VANGUARDISTAS Y PROFESIONALES (GLASSMORPHISM & EXECUTIVE THEME) ---
 st.markdown("""<style>
-.main { background-color: #fffaf8; }
-.stMetric {
-    background: #ffffff;
-    padding: 14px 16px !important;
-    border-radius: 14px;
-    box-shadow: 0 4px 20px -3px rgba(194, 65, 12, 0.12);
-    border: 1px solid #fed7aa;
-    border-left: 6px solid #ea580c;
-    margin-bottom: 10px !important;
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap');
+
+html, body, [class*="css"] {
+    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
 }
-.stMetric label {
-    font-size: 0.78rem !important;
-    color: #9a3412 !important;
-    font-weight: 800 !important;
+
+.main { 
+    background: radial-gradient(circle at top left, #fffbf7 0%, #faf3eb 50%, #f4e8dc 100%); 
+}
+
+/* Tarjeta de Encabezado y Marca */
+.brand-hero {
+    background: linear-gradient(135deg, #1e110a 0%, #3a1a0e 40%, #7c2d12 100%);
+    padding: 40px 30px;
+    border-radius: 24px;
+    color: #ffffff;
+    box-shadow: 0 20px 40px -10px rgba(124, 45, 18, 0.35);
+    margin-bottom: 30px;
+    border: 1px solid rgba(254, 215, 170, 0.25);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.brand-hero::before {
+    content: "";
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(234,88,12,0.15) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.slogan-text {
+    margin: 12px 0 6px 0;
+    font-size: 1.15rem;
+    color: #fed7aa;
+    font-weight: 500;
+    letter-spacing: 0.2px;
+}
+
+.author-text {
+    margin: 8px 0 0 0;
+    font-size: 0.85rem;
+    color: #fb923c;
+    font-weight: 800;
+    letter-spacing: 1.5px;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
 }
-.stMetric [data-testid="stMetricValue"] {
-    font-size: 1.35rem !important;
-    color: #431407 !important;
-    font-weight: 900 !important;
-}
-h1, h2, h3, h4, h5, h6 {
-    color: #431407 !important;
-    font-weight: 800 !important;
-}
-.auth-container {
-    background-color: #ffffff;
+
+/* Contenedores de Formulario e Interfaz */
+.auth-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
     padding: 35px;
     border-radius: 20px;
-    border: 2px solid #fed7aa;
-    box-shadow: 0 10px 30px rgba(194, 65, 12, 0.12);
-    max-width: 550px;
+    border: 1px solid #fed7aa;
+    box-shadow: 0 12px 32px rgba(124, 45, 18, 0.08);
+    max-width: 520px;
     margin: 0 auto;
 }
-.brand-header {
-    background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%);
-    padding: 30px;
+
+/* Tarjetas de Planes de Suscripción */
+.plan-card {
+    background: #ffffff;
+    padding: 30px 25px;
     border-radius: 20px;
-    color: #431407;
-    box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15);
-    margin-bottom: 25px;
+    border: 1px solid #fed7aa;
+    box-shadow: 0 10px 30px rgba(124, 45, 18, 0.06);
+    transition: all 0.3s ease;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.plan-card-featured {
+    background: linear-gradient(180deg, #ffffff 0%, #fff7ed 100%);
+    padding: 30px 25px;
+    border-radius: 20px;
     border: 2px solid #ea580c;
-    text-align: center;
+    box-shadow: 0 16px 36px rgba(234, 88, 12, 0.18);
+    height: 100%;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.stMetric {
+    background: #ffffff !important;
+    padding: 16px !important;
+    border-radius: 16px !important;
+    box-shadow: 0 4px 20px -3px rgba(194, 65, 12, 0.08) !important;
+    border: 1px solid #fed7aa !important;
+    border-left: 6px solid #ea580c !important;
+}
+
+/* Botones con estilo moderno */
+.stButton>button {
+    border-radius: 12px !important;
+    font-weight: 700 !important;
+    letter-spacing: 0.3px !important;
+    transition: all 0.2s ease !important;
 }
 </style>""", unsafe_allow_html=True)
 
-# --- FUNCIONES AUXILIARES DE SEGURIDAD (HASH & TOTP 2FA) ---
+# --- FUNCIONES DE SEGURIDAD (HASH & TOTP 2FA) ---
 def hash_password(password):
     return hashlib.pbkdf2_hmac('sha256', password.encode('utf-8'), b'cria150_salt_secure', 100000).hex()
 
@@ -93,7 +155,7 @@ def verify_totp(secret, token):
             return True
     return False
 
-# --- CLASE DE BASE DE DATOS ROBUSTA Y MULTIUSUARIO ---
+# --- BASE DE DATOS MULTIUSUARIO CRIER ---
 class CrIA150Database:
     def __init__(self, db_name="cria_elite.db"):
         self.db_name = db_name
@@ -279,43 +341,59 @@ if "step_2fa" not in st.session_state:
 if "temp_user_row" not in st.session_state:
     st.session_state.temp_user_row = None
 
-# --- PÁGINA DE INICIO / AUTENTICACIÓN SEPARADA Y ORGANIZADA ---
+# --- PÁGINA DE INICIO Y AUTENTICACIÓN (ORGANIZADA Y VANGUARDISTA) ---
 if not st.session_state.authenticated:
+    # Encabezado Hero con Logotipo SVG Rediseñado
     st.markdown("""
-        <div class="brand-header">
-            <svg width="65" height="65" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
-                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-                <path d="M2 17l10 5 10-5"></path>
-                <path d="M2 12l10 5 10-5"></path>
-            </svg>
-            <h1 style="margin: 0; font-size: 2.8rem; font-weight: 900; color: #7c2d12; letter-spacing: -0.5px;">Cr-IA <span style="color: #ea580c;">150</span></h1>
-            <p style="margin: 8px 0 0 0; font-size: 1.15rem; color: #9a3412; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">
-                "Inteligencia Biológica y Financiera para la Ganadería de Alto Rendimiento"
+        <div class="brand-hero">
+            <div style="display: flex; justify-content: center; align-items: center; margin-bottom: 12px;">
+                <svg width="85" height="85" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M50 5 L90 25 L90 75 L50 95 L10 75 L10 25 Z" stroke="url(#paint0_linear)" stroke-width="3" fill="rgba(234, 88, 12, 0.05)"/>
+                    <path d="M30 42 C30 35, 38 28, 50 28 C62 28, 70 35, 70 42 C70 52, 60 58, 50 68 C40 58, 30 52, 30 42 Z" stroke="#fed7aa" stroke-width="2.5" fill="none"/>
+                    <circle cx="50" cy="42" r="5" fill="#ea580c"/>
+                    <path d="M25 72 L40 58 M75 72 L60 58" stroke="#fb923c" stroke-width="3" stroke-linecap="round"/>
+                    <defs>
+                        <linearGradient id="paint0_linear" x1="10" y1="5" x2="90" y2="95" gradientUnits="userSpaceOnUse">
+                            <stop stop-color="#ea580c"/>
+                            <stop offset="0.5" stop-color="#f97316"/>
+                            <stop offset="1" stop-color="#fed7aa"/>
+                        </linearGradient>
+                    </defs>
+                </svg>
+            </div>
+            <h1 style="margin: 0; font-size: 3.2rem; font-weight: 900; color: #ffffff; letter-spacing: -1px; text-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                Cr-IA <span style="color: #f97316;">150</span>
+            </h1>
+            <p class="slogan-text">
+                Inteligencia biológica y financiera para la ganadería de alto rendimiento
             </p>
-            <p style="margin: 6px 0 0 0; font-size: 0.95rem; color: #431407; font-style: italic;">
-                Desarrollado por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong> | Cañón de Tlaltenango, Zacatecas
+            <p class="author-text">
+                DESARROLLADA Y CREADA POR: DR. ALEJANDRO CASTAÑEDA CORREA
             </p>
         </div>
     """, unsafe_allow_html=True)
 
-    # Pestañas principales de la página de bienvenida (Separación Clara)
-    landing_tab1, landing_tab2, landing_tab3 = st.tabs([
-        "🔑 Iniciar Sesión (Acceso Seguro)", 
-        "📝 Registro de Cuenta Nueva", 
-        "💎 Planes de Suscripción & Licenciamiento"
+    # Organización en Pestañas Separadas (Inicio de Sesión vs Planes)
+    tab_login, tab_register, tab_plans = st.tabs([
+        "🔑 Acceso de Usuarios", 
+        "📝 Registro de Nuevo Productor", 
+        "💎 Planes de Suscripción y Licenciamiento"
     ])
 
-    with landing_tab1:
+    # SECCIÓN 1: LOGIN Y 2FA
+    with tab_login:
         st.markdown("<br>", unsafe_allow_html=True)
-        col_l1, col_l2, col_l3 = st.columns([1, 1.5, 1])
+        col_l1, col_l2, col_l3 = st.columns([1, 1.6, 1])
         with col_l2:
-            st.markdown('<div class="auth-container">', unsafe_allow_html=True)
-            st.subheader("🛡️ Portal de Autenticación")
+            st.markdown('<div class="auth-card">', unsafe_allow_html=True)
+            st.subheader("🛡️ Iniciar Sesión en Tu Portal")
+            st.caption("Introduce tus credenciales para acceder a la suite de inteligencia pecuaria.")
+            
             if not st.session_state.step_2fa:
-                user_input = st.text_input("Usuario / Ganadero")
-                pwd_input = st.text_input("Contraseña", type="password")
+                user_input = st.text_input("Usuario / ID Ganadero", placeholder="Ej. demo_ganadero")
+                pwd_input = st.text_input("Contraseña", type="password", placeholder="••••••••")
                 
-                if st.button("Continuar a Verificación 2FA", use_container_width=True):
+                if st.button("Continuar a Autenticación 2FA →", use_container_width=True, type="primary"):
                     row = db.obtener_usuario(user_input)
                     if row and row[2] == hash_password(pwd_input):
                         st.session_state.temp_user_row = row
@@ -323,15 +401,16 @@ if not st.session_state.authenticated:
                         st.rerun()
                     else:
                         st.error("⚠️ Usuario o contraseña incorrectos.")
-                st.info("💡 **Usuario Demo:** `demo_ganadero` | **Contraseña:** `Hereford2026`")
+                st.markdown("---")
+                st.info("💡 **Acceso Rápido Demo:** Usuario: `demo_ganadero` | Clave: `Hereford2026`")
             else:
                 row = st.session_state.temp_user_row
-                st.subheader("📲 Doble Factor de Autenticación (2FA)")
-                st.caption(f"Rancho: {row[3]} | Plan: {row[4]}")
-                st.warning(f"🔑 Clave Secreta TOTP: **{row[5]}**")
+                st.subheader("📲 Verificación 2FA (TOTP)")
+                st.caption(f"Rancho: **{row[3]}** | Plan Activo: **{row[4]}**")
+                st.warning(f"🔑 Clave Secreta TOTP de Tu Cuenta: **{row[5]}**")
                 
-                code_2fa = st.text_input("Ingresa el código de 6 dígitos (TOTP)", max_chars=6)
-                if st.button("Verificar e Iniciar Sesión", use_container_width=True):
+                code_2fa = st.text_input("Ingresa el código de 6 dígitos", max_chars=6, placeholder="123456")
+                if st.button("Verificar e Iniciar Sesión", use_container_width=True, type="primary"):
                     if verify_totp(row[5], code_2fa) or code_2fa == "123456":
                         st.session_state.authenticated = True
                         st.session_state.user_data = {
@@ -343,93 +422,107 @@ if not st.session_state.authenticated:
                         st.success("¡Autenticación exitosa!")
                         st.rerun()
                     else:
-                        st.error("❌ Código 2FA inválido o expirado. Intenta de nuevo.")
+                        st.error("❌ Código 2FA inválido o expirado. Intenta nuevamente.")
                 
-                if st.button("← Cancelar", use_container_width=True):
+                if st.button("← Regresar al Inicio", use_container_width=True):
                     st.session_state.step_2fa = False
                     st.rerun()
             st.markdown('</div>', unsafe_allow_html=True)
 
-    with landing_tab2:
+    # SECCIÓN 2: REGISTRO DE CUENTAS
+    with tab_register:
         st.markdown("<br>", unsafe_allow_html=True)
-        col_r1, col_r2, col_r3 = st.columns([1, 1.5, 1])
+        col_r1, col_r2, col_r3 = st.columns([1, 1.6, 1])
         with col_r2:
-            st.markdown('<div class="auth-container">', unsafe_allow_html=True)
-            st.subheader("📝 Creación de Cuenta Ganadera")
-            new_user = st.text_input("Nuevo Usuario (ID)")
-            new_pwd = st.text_input("Contraseña Segura", type="password")
-            new_rancho = st.text_input("Nombre de tu Rancho / Ganadería")
-            new_plan = st.selectbox("Selecciona tu Plan de Suscripción", [
-                "Rancho Pyme ($499 MXN/mes - Hasta 100 Vientres)",
-                "Enterprise Elite ($1,250 MXN/mes - Vientres Ilimitados + LP + Predictivo)",
-                "Corporativo / Multirancho ($2,800 MXN/mes - Soporte VIP & API)"
+            st.markdown('<div class="auth-card">', unsafe_allow_html=True)
+            st.subheader("📝 Alta de Nuevo Usuario Ganadero")
+            st.caption("Crea tu perfil y selecciona el plan de potencia adecuado.")
+            
+            new_user = st.text_input("Usuario Deseado", placeholder="Ej. ganaderia_cañon")
+            new_pwd = st.text_input("Contraseña Segura", type="password", placeholder="••••••••")
+            new_rancho = st.text_input("Nombre de tu Rancho / Empresa", placeholder="Ej. Rancho El Cañón")
+            new_plan = st.selectbox("Plan de Suscripción Inicial", [
+                "Rancho Pyme ($499 MXN/mes)",
+                "Enterprise Elite ($1,250 MXN/mes)",
+                "Corporativo / Multirancho ($2,800 MXN/mes)"
             ])
             
-            if st.button("Registrar Cuenta y Generar 2FA", use_container_width=True):
+            if st.button("Registrar Cuenta & Obtener Clave 2FA", use_container_width=True, type="primary"):
                 if new_user and new_pwd and new_rancho:
                     exito, msg, sec = db.registrar_usuario(new_user, new_pwd, new_rancho, new_plan.split(" (")[0])
                     if exito:
-                        st.success(f"{msg}\nTu Clave 2FA es: **{sec}**. Guárdala en tu app de autenticación.")
+                        st.success(f"{msg}\n\n🔑 **Tu clave 2FA asignada es:** `{sec}`. Guárdala en Google Authenticator o Authy.")
                     else:
                         st.error(msg)
                 else:
-                    st.warning("⚠️ Completa todos los campos requeridos.")
+                    st.warning("⚠️ Por favor completa todos los datos requeridos.")
             st.markdown('</div>', unsafe_allow_html=True)
 
-    with landing_tab3:
+    # SECCIÓN 3: PLANES DE SUSCRIPCIÓN (COMPLETAMENTE INDEPENDIENTES)
+    with tab_plans:
         st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("<h2 style='text-align: center; color: #7c2d12;'>💎 Conoce Nuestros Planes de Licenciamiento Pecuario</h2>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; color: #9a3412;'>Elige la potencia tecnológica que mejor se adapte a las necesidades operativas de tu rancho.</p>", unsafe_allow_html=True)
+        st.markdown("<h2 style='text-align: center; color: #431407; font-weight: 800;'>💎 Planes de Suscripción y Licenciamiento Pecuario</h2>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; color: #7c2d12; font-size: 1.05rem;'>Plataforma escalable adaptada al tamaño y visión comercial de tu ganadería.</p>", unsafe_allow_html=True)
         st.markdown("<br>", unsafe_allow_html=True)
+
+        col_p1, col_p2, col_p3 = st.columns(3, gap="large")
         
-        col_p1, col_p2, col_p3 = st.columns(3, gap="medium")
         with col_p1:
             st.markdown("""
-                <div style="background: #ffffff; padding: 25px; border-radius: 16px; border: 2px solid #fed7aa; box-shadow: 0 8px 20px rgba(194,65,12,0.1); height: 100%;">
-                    <h3 style="color: #9a3412; margin-top: 0;">🌱 Rancho Pyme</h3>
-                    <h2 style="color: #ea580c; font-size: 2rem; margin: 10px 0;">$499 <span style="font-size: 1rem; color: #666;">MXN / mes</span></h2>
-                    <p style="color: #555; font-size: 0.9rem;">Ideal para pequeños productores que buscan digitalizar su hato con precisión.</p>
-                    <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 15px 0;">
-                    <ul style="padding-left: 20px; color: #333; font-size: 0.9rem;">
-                        <li>Hasta 100 vientres registrados</li>
-                        <li>Inventario SQLite & Sanidad</li>
-                        <li>Optimizador LP de raciones básico</li>
-                        <li>Seguridad 2FA TOTP integrada</li>
-                    </ul>
+                <div class="plan-card">
+                    <div>
+                        <h3 style="color: #9a3412; margin-top: 0; font-size: 1.4rem;">🌱 Rancho Pyme</h3>
+                        <h2 style="color: #ea580c; font-size: 2.2rem; margin: 12px 0; font-weight: 900;">$499 <span style="font-size: 0.9rem; color: #78716c; font-weight: 500;">MXN / mes</span></h2>
+                        <p style="color: #57534e; font-size: 0.9rem; line-height: 1.5;">Para pequeños y medianos productores que inician en la digitalización de inventario.</p>
+                        <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 20px 0;">
+                        <ul style="padding-left: 18px; color: #292524; font-size: 0.9rem; line-height: 1.8;">
+                            <li>Capacidad: Hasta 100 Vientres</li>
+                            <li>Inventario & Sanidad SQLite</li>
+                            <li>Optimizador LP de raciones básico</li>
+                            <li>Doble Factor de Autenticación (2FA)</li>
+                        </ul>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
+            
         with col_p2:
             st.markdown("""
-                <div style="background: #fff7ed; padding: 25px; border-radius: 16px; border: 3px solid #ea580c; box-shadow: 0 10px 25px rgba(234,88,12,0.2); height: 100%;">
-                    <span style="background: #ea580c; color: white; padding: 3px 10px; border-radius: 10px; font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Más Popular</span>
-                    <h3 style="color: #9a3412; margin-top: 8px;">🚀 Enterprise Elite</h3>
-                    <h2 style="color: #b91c1c; font-size: 2rem; margin: 10px 0;">$1,250 <span style="font-size: 1rem; color: #666;">MXN / mes</span></h2>
-                    <p style="color: #555; font-size: 0.9rem;">Para ranchos consolidados que requieren optimización matemática y predictiva total.</p>
-                    <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 15px 0;">
-                    <ul style="padding-left: 20px; color: #333; font-size: 0.9rem;">
-                        <li>Vientres ilimitados en base de datos</li>
-                        <li>Optimizador LP de 1 clic avanzado</li>
-                        <li>Predictivo de Engorda (Destete vs Gordo)</li>
-                        <li>Reportes Ejecutivos PDF automáticos</li>
-                        <li>Asesoría con Dr. Alejandro Castañeda</li>
-                    </ul>
+                <div class="plan-card-featured">
+                    <div>
+                        <div style="background: #ea580c; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; display: inline-block; margin-bottom: 8px;">Recomendado por Especialistas</div>
+                        <h3 style="color: #7c2d12; margin-top: 0; font-size: 1.4rem;">🚀 Enterprise Elite</h3>
+                        <h2 style="color: #b91c1c; font-size: 2.2rem; margin: 12px 0; font-weight: 900;">$1,250 <span style="font-size: 0.9rem; color: #78716c; font-weight: 500;">MXN / mes</span></h2>
+                        <p style="color: #57534e; font-size: 0.9rem; line-height: 1.5;">Para empresas ganaderas que buscan optimización nutricional y decisiones financieras avanzadas.</p>
+                        <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 20px 0;">
+                        <ul style="padding-left: 18px; color: #292524; font-size: 0.9rem; line-height: 1.8;">
+                            <li><strong>Vientres y Registro Ilimitado</strong></li>
+                            <li>Optimizador LP Avanzado 1-Click</li>
+                            <li>Predicción de Engorda (Destete vs. Gordo)</li>
+                            <li>Generador Ejecutivo de Reportes PDF</li>
+                            <li>Asesoría VIP con el Dr. Alejandro Castañeda</li>
+                        </ul>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
+
         with col_p3:
             st.markdown("""
-                <div style="background: #ffffff; padding: 25px; border-radius: 16px; border: 2px solid #fed7aa; box-shadow: 0 8px 20px rgba(194,65,12,0.1); height: 100%;">
-                    <h3 style="color: #9a3412; margin-top: 0;">🏢 Corporativo</h3>
-                    <h2 style="color: #ea580c; font-size: 2rem; margin: 10px 0;">$2,800 <span style="font-size: 1rem; color: #666;">MXN / mes</span></h2>
-                    <p style="color: #555; font-size: 0.9rem;">Diseñado para corporativos pecuarios, remates y múltiples ranchos.</p>
-                    <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 15px 0;">
-                    <ul style="padding-left: 20px; color: #333; font-size: 0.9rem;">
-                        <li>Gestión multirancho simultánea</li>
-                        <li>Modelación Monte Carlo avanzada</li>
-                        <li>Exportación masiva y API personalizada</li>
-                        <li>Soporte técnico prioritario 24/7</li>
-                    </ul>
+                <div class="plan-card">
+                    <div>
+                        <h3 style="color: #9a3412; margin-top: 0; font-size: 1.4rem;">🏢 Corporativo</h3>
+                        <h2 style="color: #ea580c; font-size: 2.2rem; margin: 12px 0; font-weight: 900;">$2,800 <span style="font-size: 0.9rem; color: #78716c; font-weight: 500;">MXN / mes</span></h2>
+                        <p style="color: #57534e; font-size: 0.9rem; line-height: 1.5;">Solución multirancho para consorcios ganaderos y centros de subastas.</p>
+                        <hr style="border: 0; border-top: 1px solid #fed7aa; margin: 20px 0;">
+                        <ul style="padding-left: 18px; color: #292524; font-size: 0.9rem; line-height: 1.8;">
+                            <li>Gestión Multirancho Unificada</li>
+                            <li>Simulaciones Financieras Monte Carlo</li>
+                            <li>Exportación de Datos Masiva & API</li>
+                            <li>Soporte Técnico VIP y Asesoría 24/7</li>
+                        </ul>
+                    </div>
                 </div>
             """, unsafe_allow_html=True)
+            
     st.stop()
 
 # --- A PARTIR DE AQUÍ EL USUARIO ESTÁ AUTENTICADO ---
@@ -476,14 +569,15 @@ with st.sidebar.expander("⚙️ Parámetros del Hato & Empresa", expanded=True)
     precio_venta_kg = st.number_input("Precio Venta Becerro Destetado ($/kg)", min_value=30.0, max_value=120.0, value=84.0, step=1.0)
     costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre ($/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
 
+# Encabezado Interno
 st.markdown("""
-    <div class="brand-header">
-        <h1 style="margin: 0; font-size: 2.2rem; font-weight: 900; color: #7c2d12;">Cr-IA <span style="color: #ea580c;">150</span></h1>
-        <p style="margin: 6px 0 0 0; font-size: 0.95rem; color: #9a3412; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
-            "Inteligencia Biológica y Financiera para la Ganadería de Alto Rendimiento"
+    <div class="brand-hero" style="padding: 25px 20px; margin-bottom: 20px;">
+        <h1 style="margin: 0; font-size: 2.2rem; font-weight: 900; color: #ffffff;">Cr-IA <span style="color: #f97316;">150</span></h1>
+        <p class="slogan-text" style="font-size: 0.95rem; margin: 4px 0;">
+            Inteligencia biológica y financiera para la ganadería de alto rendimiento
         </p>
-        <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #431407; font-style: italic;">
-            Desarrollado por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong> | Cañón de Tlaltenango, Zacatecas
+        <p class="author-text" style="font-size: 0.75rem; margin-top: 4px;">
+            DESARROLLADA Y CREADA POR: DR. ALEJANDRO CASTAÑEDA CORREA
         </p>
     </div>
 """, unsafe_allow_html=True)
@@ -528,7 +622,7 @@ class PDFCrIAReport(FPDF):
         self.set_text_color(194, 65, 12)
         self.cell(0, 10, 'Cr-IA 150 Enterprise - Reporte de Inteligencia Ganadera', 0, 1, 'C')
         self.set_font('Arial', 'I', 9)
-        self.cell(0, 5, 'Desarrollado por el Nutriologo Veterinario Dr. Alejandro Castaneda Correa', 0, 1, 'C')
+        self.cell(0, 5, 'DESARROLLADA Y CREADA POR: DR. ALEJANDRO CASTANEDA CORREA', 0, 1, 'C')
         self.ln(3)
 
     def footer(self):
@@ -592,7 +686,7 @@ def generar_pdf_cria():
 
 tabs = st.tabs([
     "📋 1. Inventario & Altas",
-    "⚖️ 2. Condición Corporal",
+    "秤 2. Condición Corporal",
     "🧮 3. Optimizador LP (1-Click)",
     "🐄 4. Suplementación Vacas",
     "📈 5. Predicción Becerros Engorda",
