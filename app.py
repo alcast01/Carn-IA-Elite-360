@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import hashlib
 import hmac
 import time
+import struct
 
 # Configuración obligatoria de la página
 st.set_page_config(
@@ -18,7 +19,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# --- ESTILOS CSS DE NIVEL EMPRESARIAL CON ACCESO SEGURO ---
+# --- ESTILOS CSS DE NIVEL EMPRESARIAL Y REDISEÑO DE LOGOTIPO ---
 st.markdown("""<style>
 .main { background-color: #fffaf8; }
 .stMetric {
@@ -46,14 +47,22 @@ h1, h2, h3, h4, h5, h6 {
     color: #431407 !important;
     font-weight: 800 !important;
 }
-.auth-box {
+.auth-container {
     background-color: #ffffff;
-    padding: 30px;
+    padding: 35px;
     border-radius: 20px;
     border: 2px solid #fed7aa;
-    box-shadow: 0 10px 25px rgba(194, 65, 12, 0.1);
-    max-width: 500px;
-    margin: 0 auto;
+    box-shadow: 0 10px 30px rgba(194, 65, 12, 0.12);
+}
+.brand-header {
+    background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%);
+    padding: 30px;
+    border-radius: 20px;
+    color: #431407;
+    box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15);
+    margin-bottom: 25px;
+    border: 2px solid #ea580c;
+    text-align: center;
 }
 </style>""", unsafe_allow_html=True)
 
@@ -69,13 +78,10 @@ def get_totp_token(secret, intervals_no=None):
     if intervals_no is None:
         intervals_no = int(time.time() // 30)
     key = secret.encode('utf-8')
-    msg = struct.pack(">Q", intervals_no) if 'struct' in globals() else b''
-    # Implementación segura de respaldo sin importar struct si es necesario
-    import struct as st_mod
-    msg = st_mod.pack(">Q", intervals_no)
+    msg = struct.pack(">Q", intervals_no)
     h = hmac.new(key, msg, hashlib.sha1).digest()
     o = h[19] & 15
-    h = (st_mod.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
+    h = (struct.unpack(">I", h[o:o+4])[0] & 0x7fffffff) % 1000000
     return f"{h:06d}"
 
 def verify_totp(secret, token):
@@ -271,14 +277,30 @@ if "step_2fa" not in st.session_state:
 if "temp_user_row" not in st.session_state:
     st.session_state.temp_user_row = None
 
-# --- PANTALLA DE LOGIN / REGISTRO ---
+# --- PÁGINA DE INICIO / AUTENTICACIÓN REDISEÑADA ---
 if not st.session_state.authenticated:
-    st.markdown('<div style="text-align: center; margin-bottom: 25px;"><h1 style="color: #ea580c; font-size: 2.5rem;">🔒 Acceso Seguro Cr-IA 150</h1><p style="color: #7c2d12; font-size: 1.1rem;">Plataforma de Inteligencia Ganadera & Gestión Nutricional</p></div>', unsafe_allow_html=True)
+    st.markdown("""
+        <div class="brand-header">
+            <svg width="70" height="70" viewBox="0 0 24 24" fill="none" stroke="#b91c1c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 10px;">
+                <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                <path d="M2 17l10 5 10-5"></path>
+                <path d="M2 12l10 5 10-5"></path>
+            </svg>
+            <h1 style="margin: 0; font-size: 2.8rem; font-weight: 900; color: #7c2d12; letter-spacing: -0.5px;">Cr-IA <span style="color: #ea580c;">150</span></h1>
+            <p style="margin: 8px 0 0 0; font-size: 1.15rem; color: #9a3412; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px;">
+                "Inteligencia Biológica y Financiera para la Ganadería de Alto Rendimiento"
+            </p>
+            <p style="margin: 6px 0 0 0; font-size: 0.95rem; color: #431407; font-style: italic;">
+                Desarrollado por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong> | Cañón de Tlaltenango, Zacatecas
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
     
-    col_login, col_plans = st.columns([1, 1])
+    col_auth, col_info = st.columns([1, 1], gap="large")
     
-    with col_login:
-        st.markdown('<div class="auth-box">', unsafe_allow_html=True)
+    with col_auth:
+        st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+        st.subheader("🛡️ Portal de Acceso Seguro Ganadero")
         tab_log, tab_reg = st.tabs(["🔑 Iniciar Sesión", "📝 Registrarse & Plan"])
         
         with tab_log:
@@ -286,7 +308,7 @@ if not st.session_state.authenticated:
                 user_input = st.text_input("Usuario / Ganadero")
                 pwd_input = st.text_input("Contraseña", type="password")
                 
-                if st.button("Continuar a Autenticación", use_container_width=True):
+                if st.button("Continuar a Autenticación 2FA", use_container_width=True):
                     row = db.obtener_usuario(user_input)
                     if row and row[2] == hash_password(pwd_input):
                         st.session_state.temp_user_row = row
@@ -299,7 +321,7 @@ if not st.session_state.authenticated:
                 row = st.session_state.temp_user_row
                 st.subheader("📲 Doble Factor de Autenticación (2FA)")
                 st.caption(f"Rancho: {row[3]} | Plan: {row[4]}")
-                st.warning(f"🔑 Clave Secreta TOTP de Tu Cuenta: **{row[5]}**")
+                st.warning(f"🔑 Clave Secreta TOTP: **{row[5]}**")
                 
                 code_2fa = st.text_input("Ingresa el código de 6 dígitos (TOTP)", max_chars=6)
                 if st.button("Verificar e Iniciar Sesión", use_container_width=True):
@@ -341,7 +363,7 @@ if not st.session_state.authenticated:
                     st.warning("Completa todos los campos requeridos.")
         st.markdown('</div>', unsafe_allow_html=True)
 
-    with col_plans:
+    with col_info:
         st.markdown("""
         ### 💎 Planes de Suscripción Ganaderos Adaptados
 
@@ -355,6 +377,7 @@ if not st.session_state.authenticated:
         | **Doble Factor de Autenticación (2FA)** | ✅ | ✅ | ✅ |
         | **Asesoría Nutricional VIP** | ❌ | ✅ **Incluida** | ✅ **Directa 24/7** |
         """)
+        st.info("💡 **Ventaja Competitiva:** Cr-IA 150 integra programación lineal de mínimo costo con algoritmos de sensibilidad de precios en tiempo real para maximizar el margen de utilidad por cabeza.")
     st.stop()
 
 # --- A PARTIR DE AQUÍ EL USUARIO ESTÁ AUTENTICADO ---
@@ -401,7 +424,17 @@ with st.sidebar.expander("⚙️ Parámetros del Hato & Empresa", expanded=True)
     precio_venta_kg = st.number_input("Precio Venta Becerro Destetado ($/kg)", min_value=30.0, max_value=120.0, value=84.0, step=1.0)
     costo_operativo_vaca_ano = st.number_input("Costo Anual por Vaca Madre ($/año)", min_value=1000.0, max_value=15000.0, value=6500.0, step=250.0)
 
-st.markdown('<div style="background: linear-gradient(135deg, #fffbeb 0%, #ffedd5 50%, #fed7aa 100%); padding: 25px; border-radius: 20px; color: #431407; box-shadow: 0 10px 30px rgba(194, 65, 12, 0.15); margin-bottom: 25px; border: 2px solid #ea580c;"><div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 20px;"><div style="display: flex; align-items: center; gap: 20px;"><div style="background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%); color: #ffffff; font-size: 2.2rem; font-weight: bold; padding: 14px 22px; border-radius: 16px; box-shadow: 0 6px 20px rgba(185, 28, 28, 0.3); text-align: center; border: 2px solid #fef08a;">🐄🐮<br><span style="font-size: 0.65rem; letter-spacing: 1px; text-transform: uppercase; font-weight: 800;">Vaca & Becerro Hereford</span></div><div><h1 style="margin: 0; font-size: 2.2rem; font-weight: 900; color: #7c2d12; letter-spacing: -0.5px;">Cr-IA <span style="color: #ea580c;">150</span></h1></div></div><div><span style="background-color: #b91c1c; color: #ffffff; padding: 8px 16px; border-radius: 25px; font-size: 0.85rem; font-weight: 700; border: 1px solid #fef08a; text-transform: uppercase; letter-spacing: 1.5px; box-shadow: 0 4px 10px rgba(185, 28, 28, 0.2);">Enterprise Elite SaaS V6.0</span></div></div><div style="margin-top: 18px; padding-top: 15px; border-top: 1px solid rgba(194, 65, 12, 0.2); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;"><p style="margin: 0; font-size: 0.95rem; color: #7c2d12; font-style: italic; font-weight: 500;">"Optimizando la relación vaca-becerro con ganancia de peso superior y máxima eficiencia en agostadero."</p><p style="margin: 0; font-size: 0.9rem; color: #431407; font-weight: 700;">💻 Creado y desarrollado por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong> | Cañón de Tlaltenango</p></div></div>', unsafe_allow_html=True)
+st.markdown("""
+    <div class="brand-header">
+        <h1 style="margin: 0; font-size: 2.2rem; font-weight: 900; color: #7c2d12;">Cr-IA <span style="color: #ea580c;">150</span></h1>
+        <p style="margin: 6px 0 0 0; font-size: 0.95rem; color: #9a3412; font-weight: 700; text-transform: uppercase; letter-spacing: 1px;">
+            "Inteligencia Biológica y Financiera para la Ganadería de Alto Rendimiento"
+        </p>
+        <p style="margin: 4px 0 0 0; font-size: 0.85rem; color: #431407; font-style: italic;">
+            Desarrollado por el Nutriólogo Veterinario <strong>Dr. Alejandro Castañeda Correa</strong> | Cañón de Tlaltenango, Zacatecas
+        </p>
+    </div>
+""", unsafe_allow_html=True)
 
 df_nut_base = st.session_state.df_ingredientes
 nombres_n = df_nut_base["Nombre del Ingrediente"].astype(str).values
